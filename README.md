@@ -11,7 +11,7 @@ set DELTAV_DLL_DIR=C:\DeltaV\bin
 build-net35-x86.bat
 ```
 
-The build emits `bin\DcsDataService.exe`. It references `DeltaV.Historian.DvCHDataAccess.dll`, `DeltaV.Historian.Data.dll`, and `DeltaV.Historian.Connection.dll` from the installed DeltaV directory. DeltaV/Emerson binaries are not copied into or committed to this repository. The local sibling `..\dcs_data\hda` is only a development fallback for compilation.
+The build emits `bin\DcsDataService.exe`. It references the installed DeltaV assemblies and stages the exact same-machine Historian runtime dependency closure beside the executable because target DCS installations do not necessarily register these private assemblies in the GAC. The staged DLLs remain ignored deployment artifacts and are never committed. Never stage DLLs from another DeltaV release. The local sibling `..\dcs_data\hda` is only a development fallback for compilation.
 
 ## Configure and run
 

@@ -30,6 +30,11 @@ the actual deployment drive (for example Z:\DcsAgent) into a
 dedicated read-only exporter. It never compiles or invokes SyncEngine, spool,
 receiver, or checkpoint code.
 
+The build stages the required DeltaV Historian DLL dependency closure from the
+configured DeltaVDllDir into bin beside DcsDataService.exe. These are ignored
+deployment artifacts from this DCS machine, not repository files. Never point
+DeltaVDllDir at DLLs copied from another DeltaV release.
+
 Every run creates H:\share\dcs_service\evidence\run_yyyyMMdd_HHmmss. Keep the
 complete directory. The service remains bound to 127.0.0.1. Do not intentionally
 fill Journal/EJOverflow, and never mix DeltaV DLLs from another product release.

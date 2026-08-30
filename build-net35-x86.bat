@@ -33,5 +33,28 @@ echo Building DcsDataService.exe for .NET Framework 3.5 x86...
   src\DcsDataService\Models\*.cs ^
   src\DcsDataService\Util\*.cs
 if errorlevel 1 exit /b 1
+
+echo Staging DeltaV Historian runtime assemblies beside the executable...
+for %%D in (
+  DeltaV.Historian.DvCHDataAccess.dll
+  DeltaV.Historian.Connection.dll
+  DeltaV.Historian.Data.dll
+  DeltaV.Historian.DataEditing.dll
+  DeltaV.Historian.Utility.dll
+  DeltaV.Historian.Compression.dll
+  DeltaV.Historian.Exceptions.dll
+  DeltaV.Historian.ResourceUtility.dll
+) do (
+  if not exist "%DELTAV_DLL_DIR%\%%D" (
+    echo [ERROR] Required DeltaV runtime dependency not found: "%DELTAV_DLL_DIR%\%%D"
+    exit /b 3
+  )
+  copy /y "%DELTAV_DLL_DIR%\%%D" "bin\%%D" >nul
+  if errorlevel 1 (
+    echo [ERROR] Failed to stage runtime dependency: %%D
+    exit /b 3
+  )
+)
 echo [OK] bin\DcsDataService.exe
+echo [OK] DeltaV runtime assemblies staged from "%DELTAV_DLL_DIR%"
 exit /b 0
