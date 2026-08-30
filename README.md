@@ -80,6 +80,8 @@ powershell -ExecutionPolicy Bypass -File tests\localhost-api-test.ps1
 
 The real-data parity procedure is documented in `tests\README.md`. It is a mandatory deployment gate because Historian truncation behavior, tag ambiguity, Event Journal generation/overflow state, integrated Windows identity, and DeltaV assembly binding can only be verified on the target DCS computer. Keep `dcs_data` and `dcs_event` intact as the known-good comparison tools.
 
+For the `H:\share\dcs_service` deployment, a staged real-machine acceptance runner is provided in `acceptance`. Edit `acceptance-settings.ps1`, then run the numbered `RUN-00` through `RUN-06` batch files in order. Each gate writes build/probe output and old/new CSV or JSON parity evidence under `evidence\run_yyyyMMdd_HHmmss`. The deployed package also contains ignored, deployment-only legacy HistoryReader artifacts built from `dcs_data` commit `18874cf8da52abe4cc893169b2110d37837847a1`; their SHA256 values are checked before use. Event parity compiles the existing sibling `H:\share\DcsAgent\DeltaV\DeltaVReader.cs` into a read-only exporter without sync, spool, receiver, or checkpoint components.
+
 ## Deployment cautions
 
 - Keep the default loopback bind and use an authenticated tunnel or tightly controlled local forward for later remote access.

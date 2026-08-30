@@ -12,3 +12,6 @@ hda/
 *.tlb
 *.pdb
 *.exe
+evidence/
+acceptance/current-run.txt
+acceptance/service.pid

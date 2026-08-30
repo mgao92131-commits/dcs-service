@@ -1,0 +1,22 @@
+Legacy History parity reference
+===============================
+
+Source repository: dcs_data
+Source commit: 18874cf8da52abe4cc893169b2110d37837847a1
+Build script: scripts/build-dcs.bat
+Artifacts required here:
+
+  HistoryReader.exe
+  DcsData.Historian.dll
+
+SHA256:
+
+  HistoryReader.exe
+  a23da914e1ce033b08dfcd1f228b5bf31b92408eecf14802212680038839eb93
+
+  DcsData.Historian.dll
+  62ca257db93d5b5600aa14b92dc0ed8f0834f028607bd8a115b95bf305a943ff
+
+The implementation is the previously verified reflection-based raw reader and
+is retained only as an independent read-only parity baseline. The new service
+does not call this executable at runtime.
