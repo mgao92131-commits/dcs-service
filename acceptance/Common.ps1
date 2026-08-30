@@ -98,12 +98,13 @@ function Require-Http200($Result, [string]$Operation) {
 }
 
 function Assert-ServiceRunning {
-    $client = New-Object Net.Sockets.TcpClient
+    $healthFile = Join-Path $env:TEMP ("dcs-service-health-" + [Guid]::NewGuid().ToString("N") + ".json")
     try {
-        $client.Connect($ApiBind, $ApiPort)
+        $health = Invoke-HttpJson "GET" "/health" "" $healthFile
+        Require-Http200 $health "service health"
     } catch {
         throw "DcsDataService is not listening. Run RUN-02-START-SERVICE.bat first."
     } finally {
-        $client.Close()
+        if (Test-Path -LiteralPath $healthFile) { Remove-Item -LiteralPath $healthFile -Force }
     }
 }

@@ -19,9 +19,11 @@ $EventServer = "ES01\DELTAV_CHRONICLE"
 $EventDatabase = "EJournal"
 $EventSchema = "dbo"
 $EventTable = "Journal"
-$EventStart = "2026-08-30 10:00:00"
-$EventEnd = "2026-08-30 11:00:00"
-$EventLimit = 500
+# These are raw Event Journal Date_Time values, selected near the probe's
+# latest cursor. They are not the Windows wall clock shown on the DCS desktop.
+$EventStart = "2026-08-30 06:00:00"
+$EventEnd = "2026-08-30 06:30:00"
+$EventLimit = 50
 
 $ApiBind = "127.0.0.1"
 $ApiPort = 18080

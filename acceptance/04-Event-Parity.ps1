@@ -5,9 +5,15 @@ $runDir = Get-RunDirectory
 $exporter = Join-Path $ServiceRoot "bin\EventParityExport.exe"
 if (-not (Test-Path -LiteralPath $exporter)) { throw "Event reference exporter is missing. Run RUN-01-BUILD-PROBE.bat first." }
 
-$rangeOld = Join-Path $runDir "event-range-old.json"
-$rangeNew = Join-Path $runDir "event-range-new.json"
-$rangeLegacyLog = Join-Path $runDir "event-range-legacy-console.txt"
+$artifactPrefix = "event"
+if ((Test-Path -LiteralPath (Join-Path $runDir "event-range-old.json")) -or
+    (Test-Path -LiteralPath (Join-Path $runDir "event-range-new.json"))) {
+    $artifactPrefix = "event-" + (Get-Date -Format "HHmmss")
+}
+
+$rangeOld = Join-Path $runDir ($artifactPrefix + "-range-old.json")
+$rangeNew = Join-Path $runDir ($artifactPrefix + "-range-new.json")
+$rangeLegacyLog = Join-Path $runDir ($artifactPrefix + "-range-legacy-console.txt")
 & $exporter range --server $EventServer --database $EventDatabase --schema $EventSchema --table $EventTable --timeout 30 --from $EventStart --to $EventEnd --limit $EventLimit --out $rangeOld 2>&1 | Tee-Object -FilePath $rangeLegacyLog
 if ($LASTEXITCODE -ne 0) { throw "Legacy Event range export failed." }
 
@@ -15,7 +21,7 @@ $rangeBody = '{"from":' + (Quote-Json $EventStart) + ',"to":' + (Quote-Json $Eve
 $rangeResponse = Invoke-HttpJson "POST" "/api/v1/events/query" $rangeBody $rangeNew
 Require-Http200 $rangeResponse "event range"
 
-$rangeParity = Join-Path $runDir "event-range-parity.txt"
+$rangeParity = Join-Path $runDir ($artifactPrefix + "-range-parity.txt")
 & (Join-Path $ServiceRoot "bin\ParityVerifier.exe") event $rangeOld $rangeNew 2>&1 | Tee-Object -FilePath $rangeParity
 if ($LASTEXITCODE -ne 0) { throw "Event range parity failed." }
 
@@ -30,9 +36,9 @@ $cursorDate = [string]$cursor["dateTime"]
 $cursorFrac = [int]$cursor["fracSec"]
 $cursorOrd = [int]$cursor["ord"]
 
-$afterOld = Join-Path $runDir "event-after-old.json"
-$afterNew = Join-Path $runDir "event-after-new.json"
-$afterLegacyLog = Join-Path $runDir "event-after-legacy-console.txt"
+$afterOld = Join-Path $runDir ($artifactPrefix + "-after-old.json")
+$afterNew = Join-Path $runDir ($artifactPrefix + "-after-new.json")
+$afterLegacyLog = Join-Path $runDir ($artifactPrefix + "-after-legacy-console.txt")
 & $exporter after --server $EventServer --database $EventDatabase --schema $EventSchema --table $EventTable --timeout 30 --cursor-date $cursorDate --cursor-frac $cursorFrac --cursor-ord $cursorOrd --limit $EventLimit --out $afterOld 2>&1 | Tee-Object -FilePath $afterLegacyLog
 if ($LASTEXITCODE -ne 0) { throw "Legacy Event after export failed." }
 $oldAfter = Read-Json $afterOld
@@ -44,7 +50,7 @@ $afterBody = '{"sourceGeneration":' + (Quote-Json $generation) + ',"after":{"dat
 $afterResponse = Invoke-HttpJson "POST" "/api/v1/events/after" $afterBody $afterNew
 Require-Http200 $afterResponse "event after"
 
-$afterParity = Join-Path $runDir "event-after-parity.txt"
+$afterParity = Join-Path $runDir ($artifactPrefix + "-after-parity.txt")
 & (Join-Path $ServiceRoot "bin\ParityVerifier.exe") event $afterOld $afterNew 2>&1 | Tee-Object -FilePath $afterParity
 if ($LASTEXITCODE -ne 0) { throw "Event after parity failed." }
 
