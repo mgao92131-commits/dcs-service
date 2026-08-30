@@ -12,11 +12,10 @@ if (-not (Test-Path -LiteralPath $SettingsPath)) {
 function Assert-Configured {
     $required = @(
         @{ Name = "HistoryTag"; Value = $HistoryTag },
-        @{ Name = "EventServer"; Value = $EventServer },
-        @{ Name = "ApiKey"; Value = $ApiKey }
+        @{ Name = "EventServer"; Value = $EventServer }
     )
     foreach ($item in $required) {
-        if ([String]::IsNullOrEmpty($item.Value) -or $item.Value -eq "CHANGE_ME") {
+        if ([String]::IsNullOrEmpty($item.Value)) {
             throw ($item.Name + " must be set in " + $SettingsPath)
         }
     }
@@ -53,7 +52,6 @@ function Invoke-HttpJson([string]$Method, [string]$Path, [string]$Body, [string]
     $request = [Net.HttpWebRequest]::Create($url)
     $request.Method = $Method
     $request.ContentType = "application/json"
-    $request.Headers.Add("X-DCS-API-Key", $ApiKey)
     $request.Timeout = 65000
     $request.ReadWriteTimeout = 65000
     if ($Method -eq "POST") {
@@ -76,6 +74,21 @@ function Invoke-HttpJson([string]$Method, [string]$Path, [string]$Body, [string]
     }
     Save-Text $OutputPath $text
     return @{ Status = $status; Text = $text }
+}
+
+function Invoke-HttpCsv([string]$Path, [string]$OutputPath) {
+    $url = "http://" + $ApiBind + ":" + $ApiPort + $Path
+    $request = [Net.HttpWebRequest]::Create($url); $request.Method = "GET"; $request.Timeout = 65000; $request.ReadWriteTimeout = 65000
+    try {
+        $response = $request.GetResponse(); $status = [int]$response.StatusCode; $headers = $response.Headers
+        $reader = New-Object IO.StreamReader($response.GetResponseStream())
+        try { $text = $reader.ReadToEnd() } finally { $reader.Close(); $response.Close() }
+    } catch [Net.WebException] {
+        if ($_.Exception.Response -eq $null) { throw }; $response = $_.Exception.Response; $status = [int]$response.StatusCode; $headers = $response.Headers
+        $reader = New-Object IO.StreamReader($response.GetResponseStream()); try { $text = $reader.ReadToEnd() } finally { $reader.Close(); $response.Close() }
+    }
+    Save-Text $OutputPath $text
+    return @{ Status = $status; Text = $text; Headers = $headers }
 }
 
 function Read-Json([string]$Path) {

@@ -1,0 +1,3 @@
+Timestamp,Value,DataType,DeltaVStatus,ArchiveStatus,SequenceNo,IsHistoryHole,IsCRHole,IsManuallyDeleted,IsManuallyInserted
+2026-08-30T16:00:00.0000000,1.25,Float,,,,false,false,false,false
+2026-08-30T16:00:01.0000000,2.5,Float,,,,false,false,false,false

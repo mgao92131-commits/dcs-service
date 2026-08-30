@@ -16,7 +16,7 @@ namespace DcsDataService.DeltaV.Historian
         private static readonly TimeSpan MinimumSlice = TimeSpan.FromSeconds(2);
         private static readonly object InitializeGate = new object();
         private static bool _initialized;
-        private readonly object _gate = new object();
+        private readonly object _tagCacheGate = new object();
         private readonly string _server;
         private readonly int _connectionTimeoutSeconds;
         private readonly ServiceLog _log;
@@ -33,34 +33,28 @@ namespace DcsDataService.DeltaV.Historian
 
         public HistorianStatus Probe()
         {
-            lock (_gate)
+            int id = -1;
+            try
             {
-                int id = -1;
-                try
-                {
-                    EnsureInitialized();
-                    IDvCHDataAccess api = DvAccess.ReadInterface;
-                    id = api.createConnection(_server, "DcsDataService", _connectionTimeoutSeconds);
-                    DvCHReadConnection connection = api.connection(id);
-                    int state = connection.getDvCHServerState();
-                    Log("Historian connect server=" + _server + " state=" + state.ToString(CultureInfo.InvariantCulture));
-                    return new HistorianStatus { DllAvailable = true, Connected = true, Server = _server, ServerState = state, Message = "OK" };
-                }
-                catch (Exception ex) { Failure("Historian probe failure", ex); throw Wrap("Historian probe failed.", ex); }
-                finally { Close(id); }
+                EnsureInitialized();
+                IDvCHDataAccess api = DvAccess.ReadInterface;
+                id = api.createConnection(_server, "DcsDataService", _connectionTimeoutSeconds);
+                DvCHReadConnection connection = api.connection(id);
+                int state = connection.getDvCHServerState();
+                Log("Historian connect server=" + _server + " state=" + state.ToString(CultureInfo.InvariantCulture));
+                return new HistorianStatus { DllAvailable = true, Connected = true, Server = _server, ServerState = state, Message = "OK" };
             }
+            catch (Exception ex) { Failure("Historian probe failure", ex); throw Wrap("Historian probe failed.", ex); }
+            finally { Close(id); }
         }
 
         public IList<HistoryTagInfo> ResolveTags(IList<string> tags)
         {
             if (tags == null) throw new ArgumentNullException("tags");
-            lock (_gate)
-            {
-                int id = -1;
-                try { DvCHReadConnection c = Open(out id); return ResolveTagsConnected(c, tags); }
-                catch (Exception ex) { Failure("Historian tag resolution failure", ex); throw Wrap("Historian tag resolution failed.", ex); }
-                finally { Close(id); }
-            }
+            int id = -1;
+            try { DvCHReadConnection c = Open(out id); return ResolveTagsConnected(c, tags); }
+            catch (Exception ex) { Failure("Historian tag resolution failure", ex); throw Wrap("Historian tag resolution failed.", ex); }
+            finally { Close(id); }
         }
 
         public IList<HistorySample> ReadRaw(string tag, DateTime start, DateTime end, int maxSamples)
@@ -82,31 +76,28 @@ namespace DcsDataService.DeltaV.Historian
             if (maxSamples < 1) throw new ArgumentOutOfRangeException("maxSamples");
             if (maxTotalSamples < 1) throw new ArgumentOutOfRangeException("maxTotalSamples");
             Dictionary<string, bool> unique = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase); for (int i = 0; i < tags.Count; i++) { if (String.IsNullOrEmpty(tags[i])) throw new ArgumentException("Tag names cannot be empty.", "tags"); if (unique.ContainsKey(tags[i])) throw new ArgumentException("Duplicate tag: " + tags[i], "tags"); unique.Add(tags[i], true); }
-            lock (_gate)
+            int id = -1;
+            try
             {
-                int id = -1;
-                try
+                DvCHReadConnection connection = Open(out id);
+                IList<HistoryTagInfo> resolved = ResolveTagsConnected(connection, tags);
+                Dictionary<string, IList<HistorySample>> result = new Dictionary<string, IList<HistorySample>>(StringComparer.OrdinalIgnoreCase);
+                HistorySampleBudget budget = new HistorySampleBudget(maxTotalSamples);
+                for (int i = 0; i < resolved.Count; i++)
                 {
-                    DvCHReadConnection connection = Open(out id);
-                    IList<HistoryTagInfo> resolved = ResolveTagsConnected(connection, tags);
-                    Dictionary<string, IList<HistorySample>> result = new Dictionary<string, IList<HistorySample>>(StringComparer.OrdinalIgnoreCase);
-                    HistorySampleBudget budget = new HistorySampleBudget(maxTotalSamples);
-                    for (int i = 0; i < resolved.Count; i++)
-                    {
-                        HistoryTagInfo info = resolved[i];
-                        if (info.Status != HistoryTagStatus.HistoryTagOK) throw new ArgumentException("Tag is " + info.Status + ": " + info.Tag, "tags");
-                        List<HistorySample> rows = new List<HistorySample>();
-                        ReadRecursive(connection, info, start, end, maxSamples, 0, rows, budget);
-                        result[info.Tag] = Normalize(rows);
-                    }
-                    return result;
+                    HistoryTagInfo info = resolved[i];
+                    if (info.Status != HistoryTagStatus.HistoryTagOK) throw new ArgumentException("Tag is " + info.Status + ": " + info.Tag, "tags");
+                    List<HistorySample> rows = new List<HistorySample>();
+                    ReadRecursive(connection, info, start, end, maxSamples, 0, rows, budget);
+                    result[info.Tag] = Normalize(rows);
                 }
-                catch (HistorianException) { throw; }
-                catch (HistoryQueryTooLargeException) { throw; }
-                catch (ArgumentException) { throw; }
-                catch (Exception ex) { Failure("Historian multi-tag raw read failure", ex); throw Wrap("Historian raw read failed.", ex); }
-                finally { Close(id); }
+                return result;
             }
+            catch (HistorianException) { throw; }
+            catch (HistoryQueryTooLargeException) { throw; }
+            catch (ArgumentException) { throw; }
+            catch (Exception ex) { Failure("Historian raw read failure", ex); throw Wrap("Historian raw read failed.", ex); }
+            finally { Close(id); }
         }
 
         private DvCHReadConnection Open(out int id)
@@ -119,7 +110,7 @@ namespace DcsDataService.DeltaV.Historian
         private IList<HistoryTagInfo> ResolveTagsConnected(DvCHReadConnection connection, IList<string> tags)
         {
             List<HistoryTagInfo> cachedResult = new List<HistoryTagInfo>(); bool allCached = true;
-            for (int i = 0; i < tags.Count; i++) { HistoryTagInfo cached; if (_tagCache.TryGetValue(tags[i], out cached) && (cached.Status != HistoryTagStatus.HistoryTagOK || !String.IsNullOrEmpty(cached.DataType))) cachedResult.Add(cached); else { allCached = false; break; } }
+            lock (_tagCacheGate) for (int i = 0; i < tags.Count; i++) { HistoryTagInfo cached; if (_tagCache.TryGetValue(tags[i], out cached) && (cached.Status != HistoryTagStatus.HistoryTagOK || !String.IsNullOrEmpty(cached.DataType))) cachedResult.Add(cached); else { allCached = false; break; } }
             if (allCached) return cachedResult;
             ArrayList names = new ArrayList(); for (int i = 0; i < tags.Count; i++) names.Add(tags[i]);
             int[] handles; int[] statuses; connection.getServerTagHandles(names, out handles, out statuses);
@@ -128,8 +119,8 @@ namespace DcsDataService.DeltaV.Historian
             {
                 int status = i < statuses.Length ? statuses[i] : -1;
                 HistoryTagInfo info = new HistoryTagInfo { Tag = tags[i], Handle = i < handles.Length ? handles[i] : -1, Status = MapStatus(status), DataType = "" };
-                HistoryTagInfo cached; if (_tagCache.TryGetValue(info.Tag, out cached) && cached.Handle == info.Handle && cached.Status == info.Status) info.DataType = cached.DataType;
-                _tagCache[info.Tag] = info; result.Add(info);
+                lock (_tagCacheGate) { HistoryTagInfo cached; if (_tagCache.TryGetValue(info.Tag, out cached) && cached.Handle == info.Handle && cached.Status == info.Status) info.DataType = cached.DataType; _tagCache[info.Tag] = info; }
+                result.Add(info);
             }
             PopulateTypeInfo(connection, result); return result;
         }
@@ -142,9 +133,9 @@ namespace DcsDataService.DeltaV.Historian
             try
             {
                 HistoryTagCollection metadata; connection.getTagTypeInfo(handles, out metadata);
-                int index = 0; foreach (HistoryTag tag in metadata) { while (index < tags.Count && tags[index].Status != HistoryTagStatus.HistoryTagOK) index++; if (index >= tags.Count) break; tags[index].DataType = tag.dataType.ToString(); _tagCache[tags[index].Tag] = tags[index]; index++; }
+                int index = 0; foreach (HistoryTag tag in metadata) { while (index < tags.Count && tags[index].Status != HistoryTagStatus.HistoryTagOK) index++; if (index >= tags.Count) break; tags[index].DataType = tag.dataType.ToString(); lock (_tagCacheGate) _tagCache[tags[index].Tag] = tags[index]; index++; }
             }
-            catch (Exception ex) { Failure("Historian getTagTypeInfo failed; tag handles remain usable", ex); }
+            catch (Exception ex) { if (_log != null) for (int i = 0; i < tags.Count; i++) if (tags[i].Status == HistoryTagStatus.HistoryTagOK) _log.Warning("Tag metadata unavailable tag=" + tags[i].Tag + " reason=" + ex.Message, ex); }
         }
 
         private static HistoryTagStatus MapStatus(int value)

@@ -10,12 +10,11 @@ namespace DcsDataService.Api
         private readonly Dictionary<string, Route> _routes = new Dictionary<string, Route>(StringComparer.Ordinal);
         public Router(HandlerContext c)
         {
-            Add("GET", "/health", new HealthHandler()); Add("GET", "/api/v1/info", new InfoHandler(c)); Add("POST", "/api/v1/tags/resolve", new TagHandler(c)); Add("POST", "/api/v1/history/query", new HistoryHandler(c)); Add("POST", "/api/v1/events/query", new DcsDataService.Api.Handlers.EventHandler(c, false)); Add("POST", "/api/v1/events/after", new DcsDataService.Api.Handlers.EventHandler(c, true));
+            Add("GET", "/health", new HealthHandler()); Add("GET", "/api/v1/info", new InfoHandler(c)); Add("GET", "/api/v1/tag", new TagHandler(c)); Add("GET", "/api/v1/history", new HistoryHandler(c)); Add("GET", "/api/v1/events", new DcsDataService.Api.Handlers.EventHandler(c));
         }
         private void Add(string method, string path, IApiHandler h) { _routes.Add(path, new Route { Method = method, Handler = h }); }
-        public object RouteRequest(HttpRequest request) { Route route; if (!_routes.TryGetValue(request.Path, out route)) throw new RouteException(404, "not_found", "Route not found."); if (!String.Equals(route.Method, request.Method, StringComparison.Ordinal)) throw new RouteException(405, "method_not_allowed", "Method not allowed."); return route.Handler.Handle(request); }
+        public HttpResponse RouteRequest(HttpRequest request) { Route route; if (!_routes.TryGetValue(request.Path, out route)) throw new RouteException(404, "not_found", "Route not found."); if (!String.Equals(route.Method, request.Method, StringComparison.Ordinal)) throw new RouteException(405, "method_not_allowed", "Method not allowed."); return route.Handler.Handle(request); }
     }
     public sealed class RouteException : Exception { public readonly int Status; public readonly string Code; public RouteException(int status, string code, string message) : base(message) { Status = status; Code = code; } }
     public sealed class RequestTooLargeException : Exception { public RequestTooLargeException(string message) : base(message) { } }
-    public sealed class ResponseTooLargeException : Exception { public ResponseTooLargeException(string message) : base(message) { } }
 }

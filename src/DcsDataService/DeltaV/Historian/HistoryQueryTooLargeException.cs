@@ -16,7 +16,7 @@ namespace DcsDataService.DeltaV.Historian
         public void Add(int count)
         {
             if (count < 0) throw new ArgumentOutOfRangeException("count");
-            if (count > _limit - _used) throw new HistoryQueryTooLargeException("History result exceeds MaxSamplesPerRequest=" + _limit + "; query stopped before more Historian segments were read.");
+            if (count > _limit - _used) throw new HistoryQueryTooLargeException("History result exceeds MaxSamplesPerHistoryRequest=" + _limit + "; query stopped before more Historian segments were read.");
             _used += count;
         }
     }

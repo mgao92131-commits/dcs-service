@@ -29,12 +29,13 @@ namespace DcsDataService.Configuration
             c.EventsServer = Text(values, "Events.Server", c.EventsServer); c.EventsDatabase = Text(values, "Events.Database", c.EventsDatabase);
             c.EventsSchema = Text(values, "Events.Schema", c.EventsSchema); c.EventsTable = Text(values, "Events.Table", c.EventsTable);
             c.EventsCommandTimeoutSeconds = Number(values, "Events.CommandTimeoutSeconds", c.EventsCommandTimeoutSeconds);
-            c.EventsStateCacheSeconds = Number(values, "Events.StateCacheSeconds", c.EventsStateCacheSeconds);
-            c.ApiBind = Text(values, "Api.Bind", c.ApiBind); c.ApiPort = Number(values, "Api.Port", c.ApiPort); c.ApiKey = Text(values, "Api.ApiKey", c.ApiKey);
-            c.MaxTagsPerRequest = Number(values, "ApiLimits.MaxTagsPerRequest", c.MaxTagsPerRequest); c.MaxEventRows = Number(values, "ApiLimits.MaxEventRows", c.MaxEventRows);
-            c.MaxRequestBytes = Number(values, "ApiLimits.MaxRequestBytes", c.MaxRequestBytes); c.MaxHistorySpanHours = Number(values, "ApiLimits.MaxHistorySpanHours", c.MaxHistorySpanHours);
-            c.MaxSamplesPerRead = Number(values, "ApiLimits.MaxSamplesPerRead", c.MaxSamplesPerRead); c.RequestTimeoutSeconds = Number(values, "ApiLimits.RequestTimeoutSeconds", c.RequestTimeoutSeconds);
-            c.MaxSamplesPerRequest = Number(values, "ApiLimits.MaxSamplesPerRequest", c.MaxSamplesPerRequest); c.MaxResponseBytes = Number(values, "ApiLimits.MaxResponseBytes", c.MaxResponseBytes);
+            c.EventsStateCacheSeconds = Number(values, "Events.RuntimeStateCacheSeconds", c.EventsStateCacheSeconds);
+            c.ApiPort = Number(values, "Api.Port", c.ApiPort);
+            c.HistoryMaxConcurrent = Number(values, "Concurrency.HistoryMaxConcurrent", c.HistoryMaxConcurrent); c.EventMaxConcurrent = Number(values, "Concurrency.EventMaxConcurrent", c.EventMaxConcurrent); c.RequestQueueLimit = Number(values, "Concurrency.RequestQueueLimit", c.RequestQueueLimit);
+            c.MaxEventRows = Number(values, "ApiLimits.MaxEventRows", c.MaxEventRows);
+            c.MaxHistorySpanHours = Number(values, "ApiLimits.MaxHistorySpanHours", c.MaxHistorySpanHours);
+            c.HistorianReadChunkSamples = Number(values, "Historian.ReadChunkSamples", c.HistorianReadChunkSamples); c.RequestTimeoutSeconds = Number(values, "ApiLimits.RequestTimeoutSeconds", c.RequestTimeoutSeconds);
+            c.MaxSamplesPerHistoryRequest = Number(values, "ApiLimits.MaxSamplesPerHistoryRequest", c.MaxSamplesPerHistoryRequest);
             c.SourceTimeZone = Text(values, "Time.SourceTimeZone", c.SourceTimeZone); c.LogDirectory = Text(values, "Files.Logs", c.LogDirectory);
             c.Validate(); return c;
         }

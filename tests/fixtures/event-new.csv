@@ -1,0 +1,2 @@
+DateTime,FracSec,Ord,EventType,EventSubType,Category,Area,Node,Unit,Module,ModuleDescription,Attribute,State,EventLevel,Desc1,Desc2,IsArchived
+2026-08-30T16:00:00.123,123,7,ALARM,,PROCESS,A,N,U,M,MD,PV,HI,1,D1,D2,0

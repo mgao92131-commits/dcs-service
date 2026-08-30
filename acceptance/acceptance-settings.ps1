@@ -27,14 +27,11 @@ $EventLimit = 50
 
 $ApiBind = "127.0.0.1"
 $ApiPort = 18080
-$ApiKey = "DCS_ACCEPTANCE_LOCAL_20260830"
 $SourceTimeZone = "China Standard Time"
 
 # Safety limits used during acceptance.
 $MaxHistorySpanHours = 24
-$MaxSamplesPerRead = 10000
-$MaxSamplesPerRequest = 50000
-$MaxResponseBytes = 8388608
+$MaxSamplesPerHistoryRequest = 50000
 $MaxEventRows = 5000
 
 # Existing verified event-agent source; it is compiled only into a read-only

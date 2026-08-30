@@ -1,19 +1,27 @@
 # Verification
 
-`localhost-api-test.ps1` checks liveness, API key rejection, route/query bounds, required Event generation, unavailable-provider mappings, malformed JSON, timeout, and request-size rejection without requiring a working DeltaV source. `CoreTests.cs` additionally covers Event overflow/full fail-closed behavior, retention/generation cursor rejection, History aggregate sample budget, and UTF-8 response-size limits.
+`localhost-api-test.ps1` checks unauthenticated liveness, the V1 route surface, GET query bounds, range/cursor exclusivity, unavailable-provider mappings, and request-size rejection without requiring a working DeltaV source.
 
-Provider parity is a DCS-machine gate. Build `ParityVerifier.exe` with `build-parity-verifier.bat`. Use identical tag/start/end/max values with the retained `dcs_data` HistoryReader and `DcsDataService` history endpoint, save the legacy CSV and complete API response JSON, then run:
+`CoreTests.cs` covers CSV escaping and invariant formatting, fixed loopback binding, bounded concurrency, Event overflow/full fail-closed behavior, retention/generation cursor rejection, and the History aggregate sample budget.
 
-```bat
-bin\ParityVerifier.exe history old.csv new-response.json "TAG"
-```
-
-It compares sample count, every value/data type, and every timestamp after converting the legacy raw UTC timestamp to the configured API source timezone. It reports first/last Beijing timestamps. Repeat with a range known to trigger `dataTruncated`; the new request must either return the complete normalized sequence or fail explicitly.
-
-For events, use identical from/to/limit/after values with the retained `dcs_event` agent reader and the two event endpoints. Save the old agent `WireBatch` JSON and the new API response, then run:
+Build and run the offline checks with:
 
 ```bat
-bin\ParityVerifier.exe event old-batch.json new-response.json
+tests\run-core-tests.bat
+tests\build-parity-verifier.bat
+powershell -NoProfile -ExecutionPolicy Bypass -File tests\localhost-api-test.ps1
 ```
 
-It compares row count, every selected event field, and reports the first/last `(Date_Time, FracSec, Ord)` cursor. Record commands and outputs as deployment evidence. These checks cannot be truthfully completed away from the real DeltaV Historian and Event Journal.
+Provider parity remains a real DCS-machine gate. Compare an old HistoryReader CSV with the V1 History CSV:
+
+```bat
+bin\ParityVerifier.exe history old.csv new-response.csv "China Standard Time"
+```
+
+Compare an old Event exporter JSON batch with the V1 Event CSV:
+
+```bat
+bin\ParityVerifier.exe event old-batch.json new-response.csv "China Standard Time"
+```
+
+The verifier compares row counts, timestamps after source-time conversion, values/data types or every Event field, and reports first/last edges. The scripts under `acceptance` capture these artifacts and cannot be truthfully completed away from the real DeltaV Historian and Event Journal.

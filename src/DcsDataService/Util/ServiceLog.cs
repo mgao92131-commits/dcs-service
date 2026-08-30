@@ -10,6 +10,7 @@ namespace DcsDataService.Util
         private readonly object _gate = new object(); private readonly string _directory;
         public ServiceLog(string directory) { _directory = String.IsNullOrEmpty(directory) ? "logs" : directory; }
         public void Info(string message) { Write("INFO", message, null); }
+        public void Warning(string message, Exception ex) { Write("WARN", message, ex); }
         public void Error(string message, Exception ex) { Write("ERROR", message, ex); }
         private void Write(string level, string message, Exception ex)
         {

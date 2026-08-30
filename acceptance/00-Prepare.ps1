@@ -11,6 +11,7 @@ $config = @"
 Server=$HistorianServer
 ConnectionTimeoutSeconds=30
 TestTag=$HistoryTag
+ReadChunkSamples=$HistorySplitMaxSamples
 
 [Events]
 Server=$EventServer
@@ -18,21 +19,20 @@ Database=$EventDatabase
 Schema=$EventSchema
 Table=$EventTable
 CommandTimeoutSeconds=30
-StateCacheSeconds=30
+RuntimeStateCacheSeconds=30
 
 [Api]
-Bind=$ApiBind
 Port=$ApiPort
-ApiKey=$ApiKey
+
+[Concurrency]
+HistoryMaxConcurrent=2
+EventMaxConcurrent=4
+RequestQueueLimit=32
 
 [ApiLimits]
-MaxTagsPerRequest=50
 MaxEventRows=$MaxEventRows
-MaxRequestBytes=1048576
 MaxHistorySpanHours=$MaxHistorySpanHours
-MaxSamplesPerRead=$MaxSamplesPerRead
-MaxSamplesPerRequest=$MaxSamplesPerRequest
-MaxResponseBytes=$MaxResponseBytes
+MaxSamplesPerHistoryRequest=$MaxSamplesPerHistoryRequest
 RequestTimeoutSeconds=60
 
 [Time]

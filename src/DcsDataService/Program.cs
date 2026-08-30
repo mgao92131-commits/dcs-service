@@ -25,10 +25,9 @@ namespace DcsDataService
                 SourceTimeConverter time = new SourceTimeConverter(config.SourceTimeZone);
                 HistorianProvider historian = new HistorianProvider(config.HistorianServer, config.HistorianConnectionTimeoutSeconds, log, time); EventProvider events = new EventProvider(config);
                 if (command == "probe") return Probe(config, historian, events, log);
-                if (String.IsNullOrEmpty(config.ApiKey) || String.Equals(config.ApiKey, "CHANGE_ME", StringComparison.Ordinal)) throw new ConfigurationException("Api.ApiKey must be changed before serve.");
-                HandlerContext context = new HandlerContext { Config = config, Historian = historian, Events = events, Log = log, Time = time }; _server = new ApiServer(config, new Router(context), log);
+                HandlerContext context = new HandlerContext { Config = config, Historian = historian, Events = events, Log = log, Time = time, HistoryGate = new ConcurrencyGate(config.HistoryMaxConcurrent), EventGate = new ConcurrencyGate(config.EventMaxConcurrent) }; _server = new ApiServer(config, new Router(context), log);
                 Console.CancelKeyPress += delegate(object sender, ConsoleCancelEventArgs e) { e.Cancel = true; if (_server != null) _server.Stop(); };
-                Console.WriteLine("DcsDataService " + Version + " listening on http://" + config.ApiBind + ":" + config.ApiPort.ToString(CultureInfo.InvariantCulture)); _server.Run(); return 0;
+                Console.WriteLine("DcsDataService " + Version + " listening on http://127.0.0.1:" + config.ApiPort.ToString(CultureInfo.InvariantCulture)); _server.Run(); return 0;
             }
             catch (Exception ex) { Console.Error.WriteLine("FATAL: " + ex.Message); return 1; }
         }

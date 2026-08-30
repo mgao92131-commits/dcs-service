@@ -7,7 +7,7 @@ This package performs read-only builds and reads. It does not write Historian,
 Event Journal, spool, receiver, or checkpoint data.
 
 Before running, edit acceptance\acceptance-settings.ps1. Set the real History
-tag and normal/AutoSplit intervals, Event server/database and interval, API key,
+tag and normal/AutoSplit intervals, Event server/database and interval,
 and DeltaV DLL directory. Use source-local DeltaV times; do not append Z.
 All public API request and response times are Beijing source-local values. The
 parity runner converts those values to raw UTC only when invoking the legacy
@@ -29,7 +29,7 @@ if the new service returns more rows than the configured per-read maximum and
 every row matches legacy HistoryReader output. If AUTOSPLIT NOT PROVEN appears,
 extend the interval or choose a denser tag without exceeding configured limits.
 If the API returns HTTP 413 query_too_large, shorten HistorySplitStart/End; do
-not raise MaxSamplesPerRequest merely to make an acceptance test pass.
+not raise MaxSamplesPerHistoryRequest merely to make an acceptance test pass.
 
 Event parity compiles DeltaVReader.cs from the sibling DcsAgent directory on
 the actual deployment drive (for example Z:\DcsAgent) into a

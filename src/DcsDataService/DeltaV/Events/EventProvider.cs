@@ -41,7 +41,7 @@ namespace DcsDataService.DeltaV.Events
                 List<EventRecord> rows; using (SqlCommand command = Command(connection, sql)) { AddCursor(command, cursor); rows = Execute(command); }
                 EventSourceInfo observedState = RuntimeState(connection); EnsureGenerationUnchanged(state.Generation, observedState.Generation);
                 EventCursor observedEarliest = ReadEdge(connection, true);
-                if (observedEarliest == null || observedEarliest.CompareTo(cursor) > 0) throw new EventCursorException("cursor_expired", "Source retention advanced past the requested cursor while the query was running.");
+                if (observedEarliest == null || observedEarliest.CompareTo(cursor) > 0) throw new EventCursorException("event_cursor_expired", "Source retention advanced past the requested cursor while the query was running.");
                 return Page(rows, limit, state.Generation, observedEarliest, ReadEdge(connection, false), cursor);
             }
         }
@@ -62,7 +62,7 @@ namespace DcsDataService.DeltaV.Events
                 using (SqlCommand command = Command(connection, sql)) { command.Parameters.Add("@from", SqlDbType.DateTime).Value = from; command.Parameters.Add("@to", SqlDbType.DateTime).Value = to; if (after != null) AddCursor(command, after); rows = Execute(command); }
                 EventSourceInfo observedState = RuntimeState(connection); EnsureGenerationUnchanged(state.Generation, observedState.Generation);
                 EventCursor observedEarliest = ReadEdge(connection, true);
-                if (after != null && (observedEarliest == null || observedEarliest.CompareTo(after) > 0)) throw new EventCursorException("cursor_expired", "Source retention advanced past the requested cursor while the query was running.");
+                if (after != null && (observedEarliest == null || observedEarliest.CompareTo(after) > 0)) throw new EventCursorException("event_cursor_expired", "Source retention advanced past the requested cursor while the query was running.");
                 if (after == null && observedEarliest != null && from < observedEarliest.DateTimeValue) throw new EventCursorException("retention_gap", "Source retention advanced into the requested range while the query was running.");
                 return Page(rows, limit, state.Generation, observedEarliest, ReadEdge(connection, false), after);
             }
@@ -80,15 +80,15 @@ namespace DcsDataService.DeltaV.Events
             if (cursor == null) throw new ArgumentNullException("cursor");
             if (!String.IsNullOrEmpty(expectedGeneration) && !String.Equals(expectedGeneration, actualGeneration, StringComparison.Ordinal)) throw new EventCursorException("source_changed", "Event Journal sourceGeneration changed; refusing to reuse the cursor.");
             if (earliest == null || latest == null) throw new EventCursorException("cursor_window_empty", "Journal cursor range is empty while a cursor was supplied.");
-            if (earliest.CompareTo(cursor) > 0) throw new EventCursorException("cursor_expired", "Source retention gap detected: earliest Journal cursor is newer than the supplied cursor.");
+            if (earliest.CompareTo(cursor) > 0) throw new EventCursorException("event_cursor_expired", "Requested cursor is older than the earliest retained Event Journal row.");
             if (latest.CompareTo(cursor) < 0) throw new EventCursorException("cursor_ahead", "Latest Journal cursor is older than the supplied cursor; the source may have been rebuilt.");
         }
 
         private EventSourceInfo RuntimeState(SqlConnection connection)
         {
+            EventSourceInfo observed = ReadSourceIdentity(connection);
             lock (_stateGate)
             {
-                EventSourceInfo observed = ReadSourceIdentity(connection);
                 if (_cachedState != null && DateTime.UtcNow < _stateExpiresUtc && String.Equals(_cachedState.Generation, observed.Generation, StringComparison.Ordinal)) observed.OverflowHasRows = _cachedState.OverflowHasRows;
                 else { observed.OverflowHasRows = ReadOverflow(connection); _stateExpiresUtc = DateTime.UtcNow.AddSeconds(_config.EventsStateCacheSeconds); }
                 EnsureSourceSafe(observed); _cachedState = observed; return observed;

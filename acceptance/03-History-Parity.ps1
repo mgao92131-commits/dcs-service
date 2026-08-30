@@ -13,7 +13,7 @@ if ($Mode -eq "Normal") {
 # Preserve evidence from an earlier attempt instead of mixing or deleting it.
 $artifactPrefix = $prefix
 if ((Test-Path -LiteralPath (Join-Path $runDir ($prefix + "-old"))) -or
-    (Test-Path -LiteralPath (Join-Path $runDir ($prefix + "-new.json")))) {
+    (Test-Path -LiteralPath (Join-Path $runDir ($prefix + "-new.csv")))) {
     $artifactPrefix = $prefix + "-" + (Get-Date -Format "HHmmss")
 }
 
@@ -34,20 +34,19 @@ if ($legacyExit -ne 0) { throw "Legacy HistoryReader failed with exit code $lega
 $csv = @(Get-ChildItem -LiteralPath $oldDir -Filter "*.csv")
 if ($csv.Count -ne 1) { throw "Expected exactly one legacy CSV, found $($csv.Count)." }
 
-$body = '{"tags":[' + (Quote-Json $HistoryTag) + '],"start":' + (Quote-Json $start) + ',"end":' + (Quote-Json $end) + ',"maxSamples":' + $max + '}'
-$newJson = Join-Path $runDir ($artifactPrefix + "-new.json")
-$response = Invoke-HttpJson "POST" "/api/v1/history/query" $body $newJson
+$newCsv = Join-Path $runDir ($artifactPrefix + "-new.csv")
+$path = "/api/v1/history?tag=" + [Uri]::EscapeDataString($HistoryTag) + "&from=" + [Uri]::EscapeDataString($start) + "&to=" + [Uri]::EscapeDataString($end)
+$response = Invoke-HttpCsv $path $newCsv
 Require-Http200 $response ($Mode + " history query")
 
-$parsed = Read-Json $newJson
-$sampleCount = [int]$parsed["data"]["sampleCount"]
+$sampleCount = [int]$response.Headers["X-DCS-Row-Count"]
 if ($Mode -eq "AutoSplit" -and $sampleCount -le $max) {
     throw "AUTOSPLIT NOT PROVEN: sampleCount=$sampleCount is not greater than per-read max=$max. Increase the interval or choose a denser tag."
 }
 
 $parityLog = Join-Path $runDir ($artifactPrefix + "-parity.txt")
 $verifier = Join-Path $ServiceRoot "bin\ParityVerifier.exe"
-& $verifier history $csv[0].FullName $newJson $HistoryTag 2>&1 | Tee-Object -FilePath $parityLog
+& $verifier history $csv[0].FullName $newCsv $SourceTimeZone 2>&1 | Tee-Object -FilePath $parityLog
 $parityExit = $LASTEXITCODE
 Add-Content -Path $parityLog -Value ("ExitCode=" + $parityExit) -Encoding Unicode
 if ($parityExit -ne 0) { throw ($Mode + " history parity failed.") }
