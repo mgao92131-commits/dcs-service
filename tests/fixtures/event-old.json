@@ -1,0 +1,1 @@
+{"records":[{"dateTime":"2026-08-30T08:00:00.123","fracSec":123,"ord":7,"eventType":"ALARM","eventSubType":null,"category":"PROCESS","area":"A","node":"N","unit":"U","module":"M","moduleDescription":"MD","attribute":"PV","state":"HI","eventLevel":"1","desc1":"D1","desc2":"D2","isArchived":0}]}

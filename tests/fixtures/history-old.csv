@@ -1,0 +1,5 @@
+# DeltaV Historian Raw Export
+# Rows=2
+Timestamp,Value,DataType,Flags
+2026-08-30 08:00:00.0000000,1.25,Float,
+2026-08-30 08:00:01.0000000,2.5,Float,
