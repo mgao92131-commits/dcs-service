@@ -17,7 +17,7 @@ function Run-Captured([string]$Name, [string]$Command) {
     $output = Join-Path $runDir $Name
     & $env:COMSPEC /d /c $Command 2>&1 | Tee-Object -FilePath $output
     $code = $LASTEXITCODE
-    Add-Content -Path $output -Value ("ExitCode=" + $code)
+    Add-Content -Path $output -Value ("ExitCode=" + $code) -Encoding Unicode
     if ($code -ne 0) { throw ($Name + " failed with exit code " + $code) }
 }
 

@@ -12,7 +12,7 @@ $HistoryNormalMaxSamples = 10000
 
 # Choose a dense tag/interval. The final row count MUST exceed this per-read max.
 $HistorySplitStart = "2026-08-29 00:00:00"
-$HistorySplitEnd = "2026-08-30 00:00:00"
+$HistorySplitEnd = "2026-08-29 01:00:00"
 $HistorySplitMaxSamples = 100
 
 $EventServer = "ES01\DELTAV_CHRONICLE"

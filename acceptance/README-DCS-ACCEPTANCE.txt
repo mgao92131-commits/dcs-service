@@ -24,6 +24,8 @@ Stop when a step fails; do not skip a failed gate. AutoSplit is accepted only
 if the new service returns more rows than the configured per-read maximum and
 every row matches legacy HistoryReader output. If AUTOSPLIT NOT PROVEN appears,
 extend the interval or choose a denser tag without exceeding configured limits.
+If the API returns HTTP 413 query_too_large, shorten HistorySplitStart/End; do
+not raise MaxSamplesPerRequest merely to make an acceptance test pass.
 
 Event parity compiles DeltaVReader.cs from the sibling DcsAgent directory on
 the actual deployment drive (for example Z:\DcsAgent) into a
