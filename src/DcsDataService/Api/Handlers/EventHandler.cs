@@ -34,13 +34,13 @@ namespace DcsDataService.Api.Handlers
                 }
             }
             _c.Log.Info("Event query rowCount=" + page.Records.Count.ToString(CultureInfo.InvariantCulture) + " generation=" + page.SourceGeneration);
-            return Csv(page, hasCursor);
+            return Csv(page);
         }
-        private HttpResponse Csv(EventPage page, bool cursorMode)
+        private HttpResponse Csv(EventPage page)
         {
             HttpResponse response = new HttpResponse { StatusCode = 200, ContentType = "text/csv; charset=utf-8" };
             response.Headers["X-DCS-Row-Count"] = page.Records.Count.ToString(CultureInfo.InvariantCulture); response.Headers["X-DCS-Source-TimeZone"] = _c.Config.SourceTimeZone; response.Headers["X-DCS-Source-Generation"] = page.SourceGeneration;
-            if (cursorMode) { SetCursorHeaders(response, page.NextCursor); response.Headers["X-DCS-Has-More"] = page.HasMore ? "true" : "false"; }
+            ApplyPagingHeaders(response, page, _c.Time);
             IList<EventRecord> rows = page.Records;
             response.BodyWriter = delegate(Stream stream)
             {
@@ -53,6 +53,11 @@ namespace DcsDataService.Api.Handlers
         }
         private static bool Has(IDictionary<string, string> values, string name) { return values.ContainsKey(name); }
         private static string FormatDate(DateTime value) { return value.ToString("yyyy-MM-ddTHH:mm:ss.fff", CultureInfo.InvariantCulture); }
-        private void SetCursorHeaders(HttpResponse response, EventCursor cursor) { if (cursor == null) return; response.Headers["X-DCS-Next-DateTime"] = FormatDate(_c.Time.RawUtcToSource(cursor.DateTimeValue)); response.Headers["X-DCS-Next-FracSec"] = cursor.FracSec.ToString(CultureInfo.InvariantCulture); response.Headers["X-DCS-Next-Ord"] = cursor.Ord.ToString(CultureInfo.InvariantCulture); }
+        public static void ApplyPagingHeaders(HttpResponse response, EventPage page, SourceTimeConverter time)
+        {
+            if (response == null) throw new ArgumentNullException("response"); if (page == null) throw new ArgumentNullException("page"); if (time == null) throw new ArgumentNullException("time");
+            response.Headers["X-DCS-Has-More"] = page.HasMore ? "true" : "false"; EventCursor cursor = page.NextCursor; if (cursor == null) return;
+            response.Headers["X-DCS-Next-DateTime"] = FormatDate(time.RawUtcToSource(cursor.DateTimeValue)); response.Headers["X-DCS-Next-FracSec"] = cursor.FracSec.ToString(CultureInfo.InvariantCulture); response.Headers["X-DCS-Next-Ord"] = cursor.Ord.ToString(CultureInfo.InvariantCulture);
+        }
     }
 }

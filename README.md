@@ -49,7 +49,9 @@ DateTime,FracSec,Ord,EventType,EventSubType,Category,Area,Node,Unit,Module,Modul
 
 CSV is UTF-8 without BOM, RFC-style escaped, and uses invariant number formatting. It is written row by row; large data does not pass through `JavaScriptSerializer`.
 
-History response metadata is carried in `X-DCS-Tag`, `X-DCS-Row-Count`, `X-DCS-Source-TimeZone`, `X-DCS-From`, and `X-DCS-To`. Event responses carry row count, source timezone and `X-DCS-Source-Generation`. Cursor responses additionally carry `X-DCS-Next-DateTime`, `X-DCS-Next-FracSec`, `X-DCS-Next-Ord`, and `X-DCS-Has-More`.
+History response metadata is carried in `X-DCS-Tag`, `X-DCS-Row-Count`, `X-DCS-Source-TimeZone`, `X-DCS-From`, and `X-DCS-To`. Every Event response carries row count, source timezone, `X-DCS-Source-Generation`, `X-DCS-Has-More`, and—when a row was returned—`X-DCS-Next-DateTime`, `X-DCS-Next-FracSec`, and `X-DCS-Next-Ord`.
+
+Event `limit` is the maximum number of rows per page, not a statement that the complete requested range contains at most that many rows. A range request establishes the first cursor; when `X-DCS-Has-More: true`, continue with the returned `X-DCS-Next-*` cursor and source generation. Cursor mode continues forward through the Journal rather than retaining the original range's `to`, so a client collecting an exact closed range must stop when it reaches that original boundary.
 
 Store the Event cursor together with `X-DCS-Source-Generation`, then send that generation with the next cursor request. A generation mismatch, an expired cursor, `JournalProperties.IsFull`, or any unverifiable/non-empty `EJOverflow` state fails closed with JSON instead of returning incomplete CSV.
 

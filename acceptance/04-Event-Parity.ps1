@@ -30,12 +30,15 @@ if ($LASTEXITCODE -ne 0) { throw "Event range parity failed." }
 $events = @(Import-Csv -LiteralPath $rangeNew)
 if ($events.Count -eq 0) { throw "Event range returned no rows. Adjust EventStart/EventEnd." }
 $generation = [string]$rangeResponse.Headers["X-DCS-Source-Generation"]
-# Use the first returned cursor so both implementations read the same following page.
-$cursor = $events[0]
-$cursorDate = [string]$cursor.DateTime
+$hasMoreText = [string]$rangeResponse.Headers["X-DCS-Has-More"]
+if ($hasMoreText -ne "true" -and $hasMoreText -ne "false") { throw "Event range did not return a valid X-DCS-Has-More header." }
+$cursorDate = [string]$rangeResponse.Headers["X-DCS-Next-DateTime"]
+$cursorFracText = [string]$rangeResponse.Headers["X-DCS-Next-FracSec"]
+$cursorOrdText = [string]$rangeResponse.Headers["X-DCS-Next-Ord"]
+if ([String]::IsNullOrEmpty($cursorDate) -or [String]::IsNullOrEmpty($cursorFracText) -or [String]::IsNullOrEmpty($cursorOrdText)) { throw "Event range did not return complete X-DCS-Next-* headers." }
 $rawCursorDate = Convert-SourceCursorToRawUtcText $cursorDate
-$cursorFrac = [int]$cursor.FracSec
-$cursorOrd = [int]$cursor.Ord
+$cursorFrac = [int]$cursorFracText
+$cursorOrd = [int]$cursorOrdText
 
 $afterOld = Join-Path $runDir ($artifactPrefix + "-after-old.json")
 $afterNew = Join-Path $runDir ($artifactPrefix + "-after-new.csv")

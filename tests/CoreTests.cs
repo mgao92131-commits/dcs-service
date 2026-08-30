@@ -15,7 +15,7 @@ internal static class CoreTests
     private static int _count;
     public static int Main()
     {
-        try { CursorUsesAllFields(); EventSourceFailsClosed(); EventCursorWindowIsValidated(); SourceTimeUsesBeijing(); HistoryNormalizationSortsAndDeduplicates(); HistoryBudgetStopsEarly(); CsvIsStandardsCompliant(); QueryStringIsParsed(); ConfigurationUsesV1Defaults(); ServerIsLoopbackOnly(); ConcurrencyGateLimitsEntry(); Console.WriteLine("CORE TESTS PASSED (" + _count + ")"); return 0; }
+        try { CursorUsesAllFields(); EventSourceFailsClosed(); EventCursorWindowIsValidated(); EventPagingHeadersAreComplete(); SourceTimeUsesBeijing(); HistoryNormalizationSortsAndDeduplicates(); HistoryBudgetStopsEarly(); CsvIsStandardsCompliant(); QueryStringIsParsed(); ConfigurationUsesV1Defaults(); ServerIsLoopbackOnly(); ConcurrencyGateLimitsEntry(); Console.WriteLine("CORE TESTS PASSED (" + _count + ")"); return 0; }
         catch (Exception ex) { Console.Error.WriteLine("CORE TEST FAILED: " + ex); return 1; }
     }
     private static void CursorUsesAllFields()
@@ -39,6 +39,12 @@ internal static class CoreTests
         EventCursor earliest = new EventCursor { DateTimeValue = new DateTime(2026, 8, 25), FracSec = 0, Ord = 1 }; EventCursor latest = new EventCursor { DateTimeValue = new DateTime(2026, 8, 30), FracSec = 0, Ord = 9 };
         EventCursorException error = null; try { EventProvider.ValidateCursorWindow(new EventCursor { DateTimeValue = new DateTime(2026, 8, 20) }, earliest, latest, "G", "G"); } catch (EventCursorException ex) { error = ex; } Check(error != null && error.ErrorCode == "event_cursor_expired", "Expired cursor must be rejected.");
         error = null; try { EventProvider.ValidateCursorWindow(latest, earliest, latest, "OLD", "NEW"); } catch (EventCursorException ex) { error = ex; } Check(error != null && error.ErrorCode == "source_changed", "Generation mismatch must be rejected.");
+    }
+    private static void EventPagingHeadersAreComplete()
+    {
+        HttpResponse response = new HttpResponse(); EventPage page = new EventPage { HasMore = true, NextCursor = new EventCursor { DateTimeValue = new DateTime(2026, 8, 30, 8, 0, 0), FracSec = 123, Ord = 456 } };
+        DcsDataService.Api.Handlers.EventHandler.ApplyPagingHeaders(response, page, new SourceTimeConverter("China Standard Time"));
+        Check(response.Headers["X-DCS-Has-More"] == "true", "Range and cursor responses must expose HasMore."); Check(response.Headers["X-DCS-Next-DateTime"] == "2026-08-30T16:00:00.000" && response.Headers["X-DCS-Next-FracSec"] == "123" && response.Headers["X-DCS-Next-Ord"] == "456", "Range and cursor responses must expose the provider NextCursor.");
     }
     private static void SourceTimeUsesBeijing()
     {
