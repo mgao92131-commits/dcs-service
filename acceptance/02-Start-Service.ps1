@@ -35,15 +35,19 @@ Save-Text $startEvidence ("Started=" + (Get-Date -Format "yyyy-MM-dd HH:mm:ss") 
 
 try {
     $ready = $false
+    $readyPath = Join-Path $env:TEMP ("dcs_service_ready_" + $process.Id + ".json")
     for ($i = 0; $i -lt 50; $i++) {
         if ($process.HasExited) { throw "Service exited during startup with code $($process.ExitCode). See the service log under $(Join-Path $ServiceRoot 'logs')." }
         try {
-            $client = New-Object Net.Sockets.TcpClient($ApiBind, $ApiPort)
-            $client.Close()
-            $ready = $true
-            break
-        } catch { Start-Sleep -Milliseconds 200 }
+            $readyResponse = Invoke-HttpJson "GET" "/health" "" $readyPath
+            if ($readyResponse.Status -eq 200) {
+                $ready = $true
+                break
+            }
+        } catch { }
+        Start-Sleep -Milliseconds 200
     }
+    if (Test-Path -LiteralPath $readyPath) { Remove-Item -LiteralPath $readyPath -Force }
     if (-not $ready) { throw "Service did not listen within 10 seconds." }
 
     $healthPath = Join-Path $runDir "07-health.json"
