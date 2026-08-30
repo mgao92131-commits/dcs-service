@@ -12,7 +12,7 @@ namespace DcsDataService
 {
     public static class Program
     {
-        public const string Version = "1.0.0";
+        public const string Version = "1.0.1";
         private static ApiServer _server;
         public static int Main(string[] args)
         {
@@ -38,7 +38,7 @@ namespace DcsDataService
             try { if (dllOk) { HistorianProbeResult r = new HistorianApiProbe(historian).Run(config.HistorianTestTag); Line("Historian Server", r.Status.Server); Line("Connection", "OK"); Line("Server State", r.Status.ServerState.ToString(CultureInfo.InvariantCulture)); Console.WriteLine(); Line("Test Tag", r.Tag.Tag); Line("Tag Resolve", r.Tag.Status.ToString()); Line("Tag Handle", r.Tag.Handle.ToString(CultureInfo.InvariantCulture)); Line("Raw sample read", "OK"); Line("Samples", r.Samples.ToString(CultureInfo.InvariantCulture)); } }
             catch (Exception ex) { ok = false; Line("Historian", "FAILED: " + ex.Message); log.Error("Historian probe failure", ex); }
             Console.WriteLine();
-            try { EventSourceInfo info = events.Probe(); EventCursor first = events.GetEarliestCursor(); EventCursor last = events.GetLatestCursor(); Line("Event Journal", "OK (" + info.Generation + ")"); Line("Earliest Cursor", first == null ? "(empty)" : first.ToString()); Line("Latest Cursor", last == null ? "(empty)" : last.ToString()); }
+            try { EventSourceInfo info = events.Probe(); Line("Event Generation", info.Generation); Line("Journal IsFull", info.IsFull.ToString()); Line("EJOverflow Rows", info.OverflowHasRows.ToString()); EventProvider.EnsureSourceSafe(info); EventCursor first = events.GetEarliestCursor(); EventCursor last = events.GetLatestCursor(); Line("Event Journal", "OK"); Line("Earliest Cursor", first == null ? "(empty)" : first.ToString()); Line("Latest Cursor", last == null ? "(empty)" : last.ToString()); }
             catch (Exception ex) { ok = false; Line("Event Journal", "FAILED: " + ex.Message); log.Error("Event probe failure", ex); }
             Console.WriteLine(); Console.WriteLine(ok ? "PROBE PASSED" : "PROBE FAILED"); return ok ? 0 : 10;
         }

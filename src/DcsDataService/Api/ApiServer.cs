@@ -9,6 +9,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using DcsDataService.Configuration;
+using DcsDataService.DeltaV.Events;
 using DcsDataService.DeltaV.Historian;
 using DcsDataService.Models;
 using DcsDataService.Util;
@@ -35,15 +36,20 @@ namespace DcsDataService.Api
                 client.ReceiveTimeout = _config.RequestTimeoutSeconds * 1000; client.SendTimeout = _config.RequestTimeoutSeconds * 1000;
                 stream = client.GetStream(); HttpRequest request = ReadRequest(stream); method = request.Method; path = request.Path;
                 string key; if (!request.Headers.TryGetValue("X-DCS-API-Key", out key) || !FixedEquals(key, _config.ApiKey)) { Write(stream, Error(401, "unauthorized", "Invalid API key.")); status = 401; return; }
-                object data = _router.RouteRequest(request); HttpResponse response = new HttpResponse { StatusCode = 200, Body = JsonUtil.Serialize(ApiResponse.Success(data)) }; status = 200; Write(stream, response);
+                object data = _router.RouteRequest(request); string json = JsonUtil.Serialize(ApiResponse.Success(data)); EnsureResponseSize(json, _config.MaxResponseBytes); HttpResponse response = new HttpResponse { StatusCode = 200, Body = json }; status = 200; Write(stream, response);
             }
             catch (RequestTooLargeException ex) { status = 413; SafeWrite(stream, Error(status, "request_too_large", ex.Message)); }
+            catch (ResponseTooLargeException ex) { status = 413; SafeWrite(stream, Error(status, "response_too_large", ex.Message)); }
             catch (RouteException ex) { status = ex.Status; SafeWrite(stream, Error(status, ex.Code, ex.Message)); }
             catch (ArgumentException ex) { status = 400; SafeWrite(stream, Error(status, "invalid_request", ex.Message)); }
             catch (FileNotFoundException ex) { status = 503; _log.Error("Historian DLL failure", ex); SafeWrite(stream, Error(status, "historian_unavailable", "Historian DLL is unavailable.")); }
             catch (IOException ex) { status = 400; _log.Error("HTTP read failure or timeout", ex); SafeWrite(stream, Error(status, "request_timeout", "Request was incomplete or timed out.")); }
             catch (HistorianException ex) { status = 503; _log.Error("Historian failure", ex); SafeWrite(stream, Error(status, "historian_unavailable", "Historian is unavailable.")); }
+            catch (HistoryQueryTooLargeException ex) { status = 413; _log.Error("History query limit", ex); SafeWrite(stream, Error(status, "query_too_large", ex.Message)); }
+            catch (EventSourceUnsafeException ex) { status = 503; _log.Error("Event source unsafe", ex); SafeWrite(stream, Error(status, ex.ErrorCode, ex.Message)); }
+            catch (EventCursorException ex) { status = 409; _log.Error("Event cursor rejected", ex); SafeWrite(stream, Error(status, ex.ErrorCode, ex.Message)); }
             catch (SqlException ex) { status = 503; _log.Error("Event SQL failure", ex); SafeWrite(stream, Error(status, "event_unavailable", "Event Journal is unavailable.")); }
+            catch (InvalidOperationException ex) { status = 503; _log.Error("Event source failure", ex); SafeWrite(stream, Error(status, "event_unavailable", "Event Journal is unavailable or unsafe.")); }
             catch (Exception ex) { status = 500; _log.Error("Unhandled API error", ex); SafeWrite(stream, Error(status, "internal_error", "Internal server error.")); }
             finally { clock.Stop(); _log.Info("API method=" + method + " path=" + path + " status=" + status.ToString(CultureInfo.InvariantCulture) + " durationMs=" + clock.ElapsedMilliseconds.ToString(CultureInfo.InvariantCulture)); try { if (stream != null) stream.Close(); } catch { } try { client.Close(); } catch { } }
         }
@@ -58,6 +64,7 @@ namespace DcsDataService.Api
             byte[] body = new byte[length]; int offset = 0; while (offset < length) { int n = stream.Read(body, offset, length - offset); if (n <= 0) throw new IOException("Unexpected end of HTTP body."); offset += n; } request.Body = Encoding.UTF8.GetString(body); return request;
         }
         private static bool FixedEquals(string a, string b) { if (a == null || b == null) return false; int diff = a.Length ^ b.Length; int n = Math.Max(a.Length, b.Length); for (int i = 0; i < n; i++) diff |= (i < a.Length ? a[i] : 0) ^ (i < b.Length ? b[i] : 0); return diff == 0; }
+        public static void EnsureResponseSize(string json, int maxBytes) { if (json == null) throw new ArgumentNullException("json"); if (maxBytes < 1) throw new ArgumentOutOfRangeException("maxBytes"); if (Encoding.UTF8.GetByteCount(json) > maxBytes) throw new ResponseTooLargeException("Response exceeds MaxResponseBytes=" + maxBytes.ToString(CultureInfo.InvariantCulture) + "."); }
         private static HttpResponse Error(int status, string code, string message) { return new HttpResponse { StatusCode = status, Body = JsonUtil.Serialize(ApiResponse.Failure(code, message)) }; }
         private static void Write(Stream stream, HttpResponse response) { byte[] bytes = response.ToBytes(); stream.Write(bytes, 0, bytes.Length); stream.Flush(); }
         private static void SafeWrite(Stream stream, HttpResponse response) { try { if (stream != null) Write(stream, response); } catch { } }

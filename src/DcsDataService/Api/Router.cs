@@ -17,4 +17,5 @@ namespace DcsDataService.Api
     }
     public sealed class RouteException : Exception { public readonly int Status; public readonly string Code; public RouteException(int status, string code, string message) : base(message) { Status = status; Code = code; } }
     public sealed class RequestTooLargeException : Exception { public RequestTooLargeException(string message) : base(message) { } }
+    public sealed class ResponseTooLargeException : Exception { public ResponseTooLargeException(string message) : base(message) { } }
 }

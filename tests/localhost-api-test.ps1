@@ -19,6 +19,7 @@ Database=invalid
 Schema=dbo
 Table=Journal
 CommandTimeoutSeconds=1
+StateCacheSeconds=1
 [Api]
 Bind=127.0.0.1
 Port=$Port
@@ -29,6 +30,8 @@ MaxEventRows=10
 MaxRequestBytes=128
 MaxHistorySpanHours=1
 MaxSamplesPerRead=10
+MaxSamplesPerRequest=20
+MaxResponseBytes=65536
 RequestTimeoutSeconds=2
 [Time]
 SourceTimeZone=China Standard Time
@@ -46,7 +49,7 @@ try {
     }
     Write-Host "Testing health..."
     $r = Invoke-Raw "GET /health HTTP/1.1`r`nHost: localhost`r`nX-DCS-API-Key: TEST_KEY`r`n`r`n"
-    if ($r -notmatch "HTTP/1.1 200" -or $r -notmatch '"status":"ok"') { throw "health failed: $r" }
+    if ($r -notmatch "HTTP/1.1 200" -or $r -notmatch '"ok":true' -or $r -notmatch '"status":"ok"') { throw "health failed: $r" }
     Write-Host "Testing API key..."
     $r = Invoke-Raw "GET /health HTTP/1.1`r`nHost: localhost`r`nX-DCS-API-Key: WRONG`r`n`r`n"
     if ($r -notmatch "HTTP/1.1 401") { throw "API key test failed: $r" }
@@ -66,6 +69,9 @@ try {
     $body = '{"tags":["A"],"start":"2026-08-30 10:00:00","end":"2026-08-30 09:00:00"}'
     $r = Invoke-Raw ("POST /api/v1/history/query HTTP/1.1`r`nHost: localhost`r`nX-DCS-API-Key: TEST_KEY`r`nContent-Type: application/json`r`nContent-Length: " + [Text.Encoding]::UTF8.GetByteCount($body) + "`r`n`r`n" + $body)
     if ($r -notmatch "HTTP/1.1 400") { throw "history range test failed: $r" }
+    $body = '{"after":{"dateTime":"2026-08-30 08:00:00","fracSec":1,"ord":1},"limit":1}'
+    $r = Invoke-Raw ("POST /api/v1/events/after HTTP/1.1`r`nHost: localhost`r`nX-DCS-API-Key: TEST_KEY`r`nContent-Type: application/json`r`nContent-Length: " + [Text.Encoding]::UTF8.GetByteCount($body) + "`r`n`r`n" + $body)
+    if ($r -notmatch "HTTP/1.1 400" -or $r -notmatch "sourceGeneration") { throw "event generation requirement failed: $r" }
     Write-Host "Testing unavailable providers..."
     $body = '{"tags":["A"]}'
     $r = Invoke-Raw ("POST /api/v1/tags/resolve HTTP/1.1`r`nHost: localhost`r`nX-DCS-API-Key: TEST_KEY`r`nContent-Type: application/json`r`nContent-Length: " + [Text.Encoding]::UTF8.GetByteCount($body) + "`r`n`r`n" + $body)

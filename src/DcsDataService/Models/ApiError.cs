@@ -1,4 +1,4 @@
 namespace DcsDataService.Models
 {
-    public sealed class ApiError { public string Code { get; set; } public string Message { get; set; } }
+    public sealed class ApiError { public string code { get; set; } public string message { get; set; } }
 }
