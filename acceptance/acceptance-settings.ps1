@@ -37,4 +37,7 @@ $MaxEventRows = 5000
 
 # Existing verified event-agent source; it is compiled only into a read-only
 # parity exporter. No SyncEngine, spool, receiver, or checkpoint code is used.
-$LegacyEventSourceDir = "H:\share\DcsAgent"
+# Resolve from the actual deployment drive. Examples:
+#   H:\share\dcs_service -> H:\share\DcsAgent
+#   Z:\dcs_service       -> Z:\DcsAgent
+$LegacyEventSourceDir = Join-Path (Split-Path -Parent $ServiceRoot) "DcsAgent"

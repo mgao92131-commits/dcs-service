@@ -25,7 +25,8 @@ if the new service returns more rows than the configured per-read maximum and
 every row matches legacy HistoryReader output. If AUTOSPLIT NOT PROVEN appears,
 extend the interval or choose a denser tag without exceeding configured limits.
 
-Event parity compiles DeltaVReader.cs from sibling H:\share\DcsAgent into a
+Event parity compiles DeltaVReader.cs from the sibling DcsAgent directory on
+the actual deployment drive (for example Z:\DcsAgent) into a
 dedicated read-only exporter. It never compiles or invokes SyncEngine, spool,
 receiver, or checkpoint code.
 
