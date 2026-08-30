@@ -25,7 +25,7 @@ bin\DcsDataService.exe serve --config config.ini
 
 `probe` is fail-closed and returns a nonzero exit code unless all of these work: strong-typed DvCH initialization, read connection via `connection(connectionId)`, server state, test-tag resolution, a five-minute raw read, Event Journal probe, safe `IsFull`/`EJOverflow` state, and earliest/latest three-field cursors. It never falls back to the scanner/capture `getConnection()` API.
 
-Times are accepted and returned as source-local `DateTime` values. They are not silently converted to UTC or suffixed with `Z`; responses include `sourceTimeZone` from configuration.
+Times are accepted and returned as source-local `DateTime` values. They are not silently converted to UTC or suffixed with `Z`; responses include `sourceTimeZone` from configuration. For the private DeltaV 10.3 call boundary, absolute span times use the strong-typed `FILETIME` overload because real-DCS parity proved that the alternate `DateTime` overload can return an empty sample collection; this is the same wire representation selected by the verified legacy reader and does not alter returned source timestamps.
 
 ## HTTP API
 

@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Runtime.InteropServices.ComTypes;
 using DeltaV.Historian.Data;
 using DeltaV.Historian.DvCHDataAccess;
 using DcsDataService.Util;
@@ -170,7 +171,13 @@ namespace DcsDataService.DeltaV.Historian
             try
             {
                 IDvCHDataAccess api = DvAccess.ReadInterface; spanId = api.createTimeSpan(); DvCHTimeSpan span = api.getTimeSpan(spanId);
-                span.setAbsoluteStartTime(start); span.setAbsoluteEndTime(end);
+                // DeltaV 10.3 exposes DateTime and FILETIME overloads. The verified
+                // legacy reader resolves the FILETIME overload, while the DateTime
+                // overload can return an empty dataSamples collection for the same
+                // source-local interval on a real DCS. Keep this call strong-typed
+                // and preserve the verified wire representation.
+                span.setAbsoluteStartTime(ToHistorianFileTime(start));
+                span.setAbsoluteEndTime(ToHistorianFileTime(end));
                 RawHistorySamples raw = connection.readRaw(spanId, tag.Handle, DataInclusionType.AllSamples, SampleBoundaryType.None, SampleBoundaryType.None, maxSamples);
                 RawSegment result = new RawSegment(); result.Truncated = raw.dataTruncated;
                 foreach (HistoryDataPoint point in raw.dataSamples)
@@ -180,6 +187,15 @@ namespace DcsDataService.DeltaV.Historian
                 return result;
             }
             finally { if (spanId >= 0) DvAccess.ReadInterface.releaseTimeSpan(spanId); }
+        }
+
+        private static FILETIME ToHistorianFileTime(DateTime sourceTime)
+        {
+            long value = sourceTime.ToUniversalTime().ToFileTimeUtc();
+            FILETIME result = new FILETIME();
+            result.dwLowDateTime = unchecked((int)(value & 0xFFFFFFFFL));
+            result.dwHighDateTime = unchecked((int)(value >> 32));
+            return result;
         }
 
         public static IList<HistorySample> Normalize(IList<HistorySample> rows)
