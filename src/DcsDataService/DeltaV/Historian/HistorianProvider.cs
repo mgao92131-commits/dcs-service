@@ -20,12 +20,15 @@ namespace DcsDataService.DeltaV.Historian
         private readonly string _server;
         private readonly int _connectionTimeoutSeconds;
         private readonly ServiceLog _log;
+        private readonly SourceTimeConverter _time;
         private readonly Dictionary<string, HistoryTagInfo> _tagCache = new Dictionary<string, HistoryTagInfo>(StringComparer.OrdinalIgnoreCase);
 
-        public HistorianProvider(string server, int connectionTimeoutSeconds) : this(server, connectionTimeoutSeconds, null) { }
-        public HistorianProvider(string server, int connectionTimeoutSeconds, ServiceLog log)
+        public HistorianProvider(string server, int connectionTimeoutSeconds) : this(server, connectionTimeoutSeconds, null, new SourceTimeConverter(TimeZoneInfo.Local.Id)) { }
+        public HistorianProvider(string server, int connectionTimeoutSeconds, ServiceLog log) : this(server, connectionTimeoutSeconds, log, new SourceTimeConverter(TimeZoneInfo.Local.Id)) { }
+        public HistorianProvider(string server, int connectionTimeoutSeconds, ServiceLog log, SourceTimeConverter time)
         {
-            _server = server; _connectionTimeoutSeconds = connectionTimeoutSeconds; _log = log;
+            if (time == null) throw new ArgumentNullException("time");
+            _server = server; _connectionTimeoutSeconds = connectionTimeoutSeconds; _log = log; _time = time;
         }
 
         public HistorianStatus Probe()
@@ -189,9 +192,9 @@ namespace DcsDataService.DeltaV.Historian
             finally { if (spanId >= 0) DvAccess.ReadInterface.releaseTimeSpan(spanId); }
         }
 
-        private static FILETIME ToHistorianFileTime(DateTime sourceTime)
+        private FILETIME ToHistorianFileTime(DateTime sourceTime)
         {
-            long value = sourceTime.ToUniversalTime().ToFileTimeUtc();
+            long value = _time.SourceToRawUtc(sourceTime).ToFileTimeUtc();
             FILETIME result = new FILETIME();
             result.dwLowDateTime = unchecked((int)(value & 0xFFFFFFFFL));
             result.dwHighDateTime = unchecked((int)(value >> 32));

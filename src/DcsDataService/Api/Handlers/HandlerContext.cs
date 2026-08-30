@@ -7,7 +7,7 @@ namespace DcsDataService.Api.Handlers
 {
     public sealed class HandlerContext
     {
-        public ServiceConfig Config; public HistorianProvider Historian; public EventProvider Events; public ServiceLog Log;
+        public ServiceConfig Config; public HistorianProvider Historian; public EventProvider Events; public ServiceLog Log; public SourceTimeConverter Time;
     }
     public interface IApiHandler { object Handle(HttpRequest request); }
 }

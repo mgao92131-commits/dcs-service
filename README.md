@@ -1,6 +1,6 @@
 # dcs_service
 
-`dcs_service` is a small, read-only gateway for DeltaV Historian raw samples and DeltaV Event Journal rows. It targets C#/.NET Framework 3.5, x86, and Windows 7. The architecture is deliberately `DeltaV private API -> Provider -> domain model -> HTTP`; HTTP never invokes a CLI or parses CSV. Code implementation is complete; DCS-machine build, probe, and parity acceptance remain deployment gates.
+`dcs_service` is a small, read-only gateway for DeltaV Historian raw samples and DeltaV Event Journal rows. It targets C#/.NET Framework 3.5, x86, and Windows 7. The architecture is deliberately `DeltaV private API -> Provider -> domain model -> HTTP`; HTTP never invokes a CLI or parses CSV. Version 1.0.1 passed real-DCS build, probe, AutoSplit, History parity, and Event Range/After parity on DeltaV 10.3.4.5354. Version 1.1.0 adds the confirmed Beijing-time HTTP contract and requires the short parity rerun described below before production use.
 
 ## Build
 
@@ -25,7 +25,7 @@ bin\DcsDataService.exe serve --config config.ini
 
 `probe` is fail-closed and returns a nonzero exit code unless all of these work: strong-typed DvCH initialization, read connection via `connection(connectionId)`, server state, test-tag resolution, a five-minute raw read, Event Journal probe, safe `IsFull`/`EJOverflow` state, and earliest/latest three-field cursors. It never falls back to the scanner/capture `getConnection()` API.
 
-Times are accepted and returned as source-local `DateTime` values. They are not silently converted to UTC or suffixed with `Z`; responses include `sourceTimeZone` from configuration. For the private DeltaV 10.3 call boundary, absolute span times use the strong-typed `FILETIME` overload because real-DCS parity proved that the alternate `DateTime` overload can return an empty sample collection; this is the same wire representation selected by the verified legacy reader and does not alter returned source timestamps.
+All HTTP request times, response timestamps, and Event cursor `dateTime` values are Beijing source-local values when `[Time] SourceTimeZone=China Standard Time`. They are serialized without `Z` and responses include both `sourceTimeZone` and `timestampSemantics=source-local`. Providers retain the unmodified raw UTC-like DeltaV/SQL values internally: Event request/cursor times are converted to raw UTC before SQL, and raw History/Event timestamps are converted to Beijing only while constructing HTTP responses. For the private DeltaV 10.3 call boundary, absolute History spans use the strong-typed `FILETIME` overload because real-DCS parity proved that the alternate `DateTime` overload can return an empty sample collection. The parity verifier converts the legacy raw timestamps to Beijing before comparison, so values, ordering, and exact instants remain independently verified.
 
 ## HTTP API
 
@@ -58,6 +58,8 @@ Invoke-RestMethod http://127.0.0.1:18080/api/v1/events/after -Method Post -Heade
 ```
 
 Event responses include `sourceGeneration`, `nextCursor`, `hasMore`, `earliestCursor`, and `latestCursor`. Clients must persist generation with the three-field cursor and return both on subsequent `after` requests. Expired/ahead cursors and generation changes return HTTP 409 instead of silently skipping data.
+
+All timestamps in the examples are Beijing time. Clients must not add eight hours, subtract eight hours, or append `Z`. For example, an Event Journal raw `Date_Time` of `2026-08-30 06:00:02` is returned by the API as `2026-08-30T14:00:02.000` with `sourceTimeZone=China Standard Time`.
 
 Responses use `{ "ok": true, "data": ... }` or `{ "ok": false, "error": { "code": ..., "message": ... } }`. Invalid arguments map to 400, API-key failures to 401, cursor/source conflicts to 409, oversized requests, responses, or History results to 413, unavailable/unsafe providers to 503, and unexpected failures to 500. Stack traces are written only to `logs/service_yyyyMMdd.log`.
 

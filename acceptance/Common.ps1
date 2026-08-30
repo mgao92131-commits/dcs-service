@@ -91,6 +91,20 @@ function Quote-Json([string]$Value) {
     return '"' + $Value.Replace('\', '\\').Replace('"', '\"') + '"'
 }
 
+function Convert-SourceToRawUtcText([string]$Value) {
+    $source = [DateTime]::ParseExact($Value, "yyyy-MM-dd HH:mm:ss", [Globalization.CultureInfo]::InvariantCulture)
+    $source = [DateTime]::SpecifyKind($source, [DateTimeKind]::Unspecified)
+    $zone = [TimeZoneInfo]::FindSystemTimeZoneById($SourceTimeZone)
+    return [TimeZoneInfo]::ConvertTimeToUtc($source, $zone).ToString("yyyy-MM-dd HH:mm:ss", [Globalization.CultureInfo]::InvariantCulture)
+}
+
+function Convert-SourceCursorToRawUtcText([string]$Value) {
+    $source = [DateTime]::ParseExact($Value, "yyyy-MM-ddTHH:mm:ss.fff", [Globalization.CultureInfo]::InvariantCulture)
+    $source = [DateTime]::SpecifyKind($source, [DateTimeKind]::Unspecified)
+    $zone = [TimeZoneInfo]::FindSystemTimeZoneById($SourceTimeZone)
+    return [TimeZoneInfo]::ConvertTimeToUtc($source, $zone).ToString("yyyy-MM-ddTHH:mm:ss.fff", [Globalization.CultureInfo]::InvariantCulture)
+}
+
 function Require-Http200($Result, [string]$Operation) {
     if ($Result.Status -ne 200) {
         throw ($Operation + " returned HTTP " + $Result.Status + ": " + $Result.Text)

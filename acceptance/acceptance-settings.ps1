@@ -19,10 +19,10 @@ $EventServer = "ES01\DELTAV_CHRONICLE"
 $EventDatabase = "EJournal"
 $EventSchema = "dbo"
 $EventTable = "Journal"
-# These are raw Event Journal Date_Time values, selected near the probe's
-# latest cursor. They are not the Windows wall clock shown on the DCS desktop.
-$EventStart = "2026-08-30 06:00:00"
-$EventEnd = "2026-08-30 06:30:00"
+# Public API request times are Beijing source-local values. The parity script
+# converts them to raw UTC only for the legacy DeltaVReader baseline.
+$EventStart = "2026-08-30 14:00:00"
+$EventEnd = "2026-08-30 14:30:00"
 $EventLimit = 50
 
 $ApiBind = "127.0.0.1"

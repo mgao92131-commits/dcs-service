@@ -8,6 +8,8 @@ $exePath = if ([IO.Path]::IsPathRooted($Exe)) { $Exe } else { [IO.Path]::GetFull
 $temp = Join-Path $env:TEMP ("dcs-service-api-test-" + [Guid]::NewGuid().ToString("N"))
 New-Item -ItemType Directory -Path $temp | Out-Null
 $config = Join-Path $temp "config.ini"
+$runtimeExe = Join-Path $temp "DcsDataService.exe"
+Copy-Item -LiteralPath $exePath -Destination $runtimeExe
 @"
 [Historian]
 Server=APP
@@ -38,7 +40,7 @@ SourceTimeZone=China Standard Time
 [Files]
 Logs=$temp\logs
 "@ | Set-Content -Encoding ASCII $config
-$process = Start-Process -FilePath $exePath -ArgumentList @("serve", "--config", $config) -PassThru -WindowStyle Hidden
+$process = Start-Process -FilePath $runtimeExe -ArgumentList @("serve", "--config", $config) -PassThru -WindowStyle Hidden
 try {
     $ready = $false
     for ($i=0; $i -lt 30; $i++) { try { $c = New-Object Net.Sockets.TcpClient("127.0.0.1", $Port); $c.Close(); $ready=$true; break } catch { Start-Sleep -Milliseconds 100 } }
@@ -87,6 +89,6 @@ try {
     if ($r -notmatch "HTTP/1.1 413") { throw "request size test failed: $r" }
     Write-Host "LOCALHOST API TEST PASSED"
 } finally {
-    if (-not $process.HasExited) { Stop-Process -Id $process.Id -Force }
+    if (-not $process.HasExited) { Stop-Process -Id $process.Id -Force; $process.WaitForExit(5000) | Out-Null }
     Remove-Item -LiteralPath $temp -Recurse -Force
 }

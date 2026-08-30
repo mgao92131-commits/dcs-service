@@ -14,7 +14,9 @@ if ((Test-Path -LiteralPath (Join-Path $runDir "event-range-old.json")) -or
 $rangeOld = Join-Path $runDir ($artifactPrefix + "-range-old.json")
 $rangeNew = Join-Path $runDir ($artifactPrefix + "-range-new.json")
 $rangeLegacyLog = Join-Path $runDir ($artifactPrefix + "-range-legacy-console.txt")
-& $exporter range --server $EventServer --database $EventDatabase --schema $EventSchema --table $EventTable --timeout 30 --from $EventStart --to $EventEnd --limit $EventLimit --out $rangeOld 2>&1 | Tee-Object -FilePath $rangeLegacyLog
+$rawEventStart = Convert-SourceToRawUtcText $EventStart
+$rawEventEnd = Convert-SourceToRawUtcText $EventEnd
+& $exporter range --server $EventServer --database $EventDatabase --schema $EventSchema --table $EventTable --timeout 30 --from $rawEventStart --to $rawEventEnd --limit $EventLimit --out $rangeOld 2>&1 | Tee-Object -FilePath $rangeLegacyLog
 if ($LASTEXITCODE -ne 0) { throw "Legacy Event range export failed." }
 
 $rangeBody = '{"from":' + (Quote-Json $EventStart) + ',"to":' + (Quote-Json $EventEnd) + ',"limit":' + $EventLimit + '}'
@@ -33,13 +35,14 @@ $generation = [string]$data["sourceGeneration"]
 # Use the first returned cursor so both implementations read the same following page.
 $cursor = $events[0]["cursor"]
 $cursorDate = [string]$cursor["dateTime"]
+$rawCursorDate = Convert-SourceCursorToRawUtcText $cursorDate
 $cursorFrac = [int]$cursor["fracSec"]
 $cursorOrd = [int]$cursor["ord"]
 
 $afterOld = Join-Path $runDir ($artifactPrefix + "-after-old.json")
 $afterNew = Join-Path $runDir ($artifactPrefix + "-after-new.json")
 $afterLegacyLog = Join-Path $runDir ($artifactPrefix + "-after-legacy-console.txt")
-& $exporter after --server $EventServer --database $EventDatabase --schema $EventSchema --table $EventTable --timeout 30 --cursor-date $cursorDate --cursor-frac $cursorFrac --cursor-ord $cursorOrd --limit $EventLimit --out $afterOld 2>&1 | Tee-Object -FilePath $afterLegacyLog
+& $exporter after --server $EventServer --database $EventDatabase --schema $EventSchema --table $EventTable --timeout 30 --cursor-date $rawCursorDate --cursor-frac $cursorFrac --cursor-ord $cursorOrd --limit $EventLimit --out $afterOld 2>&1 | Tee-Object -FilePath $afterLegacyLog
 if ($LASTEXITCODE -ne 0) { throw "Legacy Event after export failed." }
 $oldAfter = Read-Json $afterOld
 if ($oldAfter["records"].Count -ne $EventLimit) {

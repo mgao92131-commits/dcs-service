@@ -9,9 +9,10 @@ Event Journal, spool, receiver, or checkpoint data.
 Before running, edit acceptance\acceptance-settings.ps1. Set the real History
 tag and normal/AutoSplit intervals, Event server/database and interval, API key,
 and DeltaV DLL directory. Use source-local DeltaV times; do not append Z.
-For Event acceptance, use the raw Journal Date_Time visible in probe cursors;
-it may differ from the DCS desktop wall clock. Choose a completed window with
-at least EventLimit rows and leave at least EventLimit later rows for After.
+All public API request and response times are Beijing source-local values. The
+parity runner converts those values to raw UTC only when invoking the legacy
+HistoryReader/DeltaVReader baseline. Choose a completed Event window with at
+least EventLimit rows and leave at least EventLimit later rows for After.
 
 Run in this exact order:
 

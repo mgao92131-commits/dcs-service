@@ -8,7 +8,7 @@ Provider parity is a DCS-machine gate. Build `ParityVerifier.exe` with `build-pa
 bin\ParityVerifier.exe history old.csv new-response.json "TAG"
 ```
 
-It compares sample count and every timestamp/value/data type and reports first/last timestamps. Repeat with a range known to trigger `dataTruncated`; the new request must either return the complete normalized sequence or fail explicitly.
+It compares sample count, every value/data type, and every timestamp after converting the legacy raw UTC timestamp to the configured API source timezone. It reports first/last Beijing timestamps. Repeat with a range known to trigger `dataTruncated`; the new request must either return the complete normalized sequence or fail explicitly.
 
 For events, use identical from/to/limit/after values with the retained `dcs_event` agent reader and the two event endpoints. Save the old agent `WireBatch` JSON and the new API response, then run:
 

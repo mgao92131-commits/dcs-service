@@ -5,13 +5,14 @@ using DcsDataService.Configuration;
 using DcsDataService.Api;
 using DcsDataService.DeltaV.Events;
 using DcsDataService.DeltaV.Historian;
+using DcsDataService.Util;
 
 internal static class CoreTests
 {
     private static int _count;
     public static int Main()
     {
-        try { CursorUsesAllFields(); EventSourceFailsClosed(); EventCursorWindowIsValidated(); HistoryNormalizationSortsAndDeduplicates(); HistoryBudgetStopsEarly(); ResponseByteLimitUsesUtf8(); ConfigurationRejectsNonLoopback(); Console.WriteLine("CORE TESTS PASSED (" + _count + ")"); return 0; }
+        try { CursorUsesAllFields(); EventSourceFailsClosed(); EventCursorWindowIsValidated(); SourceTimeUsesBeijing(); HistoryNormalizationSortsAndDeduplicates(); HistoryBudgetStopsEarly(); ResponseByteLimitUsesUtf8(); ConfigurationRejectsNonLoopback(); Console.WriteLine("CORE TESTS PASSED (" + _count + ")"); return 0; }
         catch (Exception ex) { Console.Error.WriteLine("CORE TEST FAILED: " + ex); return 1; }
     }
     private static void CursorUsesAllFields()
@@ -41,6 +42,15 @@ internal static class CoreTests
         EventCursorException error = null; try { EventProvider.ValidateCursorWindow(new EventCursor { DateTimeValue = new DateTime(2026, 8, 20) }, earliest, latest, "G", "G"); } catch (EventCursorException ex) { error = ex; } Check(error != null && error.ErrorCode == "cursor_expired", "Expired cursor must be rejected.");
         error = null; try { EventProvider.ValidateCursorWindow(latest, earliest, latest, "OLD", "NEW"); } catch (EventCursorException ex) { error = ex; } Check(error != null && error.ErrorCode == "source_changed", "Generation mismatch must be rejected.");
         error = null; try { EventProvider.ValidateCursorWindow(new EventCursor { DateTimeValue = new DateTime(2026, 9, 1) }, earliest, latest, "G", "G"); } catch (EventCursorException ex) { error = ex; } Check(error != null && error.ErrorCode == "cursor_ahead", "Cursor ahead of source must be rejected.");
+    }
+    private static void SourceTimeUsesBeijing()
+    {
+        SourceTimeConverter time = new SourceTimeConverter("China Standard Time");
+        DateTime rawUtc = new DateTime(2026, 8, 30, 2, 0, 0);
+        DateTime source = time.RawUtcToSource(rawUtc);
+        Check(source == new DateTime(2026, 8, 30, 10, 0, 0) && source.Kind == DateTimeKind.Unspecified, "Raw UTC must be returned as Beijing source-local time.");
+        DateTime roundTrip = time.SourceToRawUtc(source);
+        Check(roundTrip == DateTime.SpecifyKind(rawUtc, DateTimeKind.Utc) && roundTrip.Kind == DateTimeKind.Utc, "Beijing source-local input must convert back to raw UTC.");
     }
     private static void HistoryBudgetStopsEarly()
     {
