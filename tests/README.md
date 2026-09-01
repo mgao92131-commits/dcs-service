@@ -2,7 +2,7 @@
 
 `localhost-api-test.ps1` checks unauthenticated liveness, the route surface, range/cursor exclusivity, removed pagination-parameter rejection, unavailable-provider mappings, and request-size rejection without requiring a working DeltaV source.
 
-`CoreTests.cs` covers CSV escaping and invariant formatting, chunk framing and terminating-chunk failure semantics, safe download names, fixed loopback binding, bounded concurrency, Event overflow/full fail-closed behavior, retention/generation cursor rejection, and streaming configuration defaults.
+`CoreTests.cs` covers CSV escaping and invariant formatting, chunk framing and terminating-chunk failure semantics, safe download names, fixed loopback binding, bounded concurrency, Event overflow/full fail-closed behavior, retention/generation/cursor-boundary rejection, independent History/Event window configuration, contiguous time-window splitting, and the distinction between range SQL and TOP 1 safety lookups.
 
 Build and run the offline checks with:
 

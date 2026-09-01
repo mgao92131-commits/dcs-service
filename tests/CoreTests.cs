@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Net;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using DcsDataService.Api;
@@ -20,7 +21,8 @@ internal static class CoreTests
     {
         try
         {
-            CursorUsesAllFields(); EventSourceFailsClosed(); EventCursorWindowIsValidated();
+            CursorUsesAllFields(); EventSourceFailsClosed(); EventCursorWindowIsValidated(); CursorRangeEndIsValidated();
+            TimeWindowSplitterProducesContiguousWindows(); EventSqlSafetyQueries();
             ChunkedWriteStreamFramesData(); ChunkedResponseCompletesOnlyOnSuccess();
             SourceTimeUsesBeijing(); HistoryNormalizationSortsAndDeduplicates();
             CsvIsStandardsCompliant(); QueryStringIsParsed(); RemovedLimitIsRejected();
@@ -55,6 +57,32 @@ internal static class CoreTests
         EventCursor earliest = new EventCursor { DateTimeValue = new DateTime(2026, 8, 25), FracSec = 0, Ord = 1 }; EventCursor latest = new EventCursor { DateTimeValue = new DateTime(2026, 8, 30), FracSec = 0, Ord = 9 };
         EventCursorException error = null; try { EventProvider.ValidateCursorWindow(new EventCursor { DateTimeValue = new DateTime(2026, 8, 20) }, earliest, latest, "G", "G"); } catch (EventCursorException ex) { error = ex; } Check(error != null && error.ErrorCode == "event_cursor_expired", "Expired cursor must be rejected.");
         error = null; try { EventProvider.ValidateCursorWindow(latest, earliest, latest, "OLD", "NEW"); } catch (EventCursorException ex) { error = ex; } Check(error != null && error.ErrorCode == "source_changed", "Generation mismatch must be rejected.");
+    }
+
+    private static void CursorRangeEndIsValidated()
+    {
+        bool rejected = false; try { EventProvider.ValidateRange(new DateTime(2026, 8, 30, 10, 0, 0), new DateTime(2026, 8, 30, 9, 0, 0)); } catch (ArgumentException) { rejected = true; }
+        Check(rejected, "Cursor to must be after afterTime.");
+    }
+
+    private static void TimeWindowSplitterProducesContiguousWindows()
+    {
+        DateTime from = new DateTime(2026, 8, 30, 8, 0, 0); DateTime to = new DateTime(2026, 8, 30, 10, 30, 0); List<DateTime> starts = new List<DateTime>(); List<DateTime> ends = new List<DateTime>();
+        TimeWindowSplitter.ForEach(from, to, TimeSpan.FromHours(1), delegate(DateTime start, DateTime end) { starts.Add(start); ends.Add(end); });
+        Check(starts.Count == 3 && ends.Count == 3, "TimeWindowSplitter must create three windows."); Check(starts[0] == from && ends[0] == starts[1] && ends[1] == starts[2] && ends[2] == to, "TimeWindowSplitter windows must be contiguous, half-open, and end at the requested boundary.");
+    }
+
+    private static void EventSqlSafetyQueries()
+    {
+        EventProvider provider = new EventProvider(new ServiceConfig());
+        string range = (string)InvokePrivate(provider, "RangeSql"); string after = (string)InvokePrivate(provider, "AfterSql"); string edge = (string)InvokePrivate(provider, "ReadEdgeSql", true); string overflow = (string)InvokePrivate(provider, "ReadOverflowSql"); string properties = (string)InvokePrivate(provider, "ReadSourceIdentitySql");
+        Check(range.IndexOf("TOP", StringComparison.OrdinalIgnoreCase) < 0 && range.IndexOf("limit", StringComparison.OrdinalIgnoreCase) < 0 && range.IndexOf("@windowFrom", StringComparison.OrdinalIgnoreCase) >= 0 && range.IndexOf("@windowTo", StringComparison.OrdinalIgnoreCase) >= 0, "Event range SQL must use half-open window parameters without pagination limits."); Check(after.IndexOf("TOP", StringComparison.OrdinalIgnoreCase) < 0 && after.IndexOf("limit", StringComparison.OrdinalIgnoreCase) < 0 && after.IndexOf("@windowFrom", StringComparison.OrdinalIgnoreCase) >= 0 && after.IndexOf("@windowTo", StringComparison.OrdinalIgnoreCase) >= 0, "Event cursor SQL must use half-open window parameters without pagination limits.");
+        Check(edge.IndexOf("SELECT TOP 1", StringComparison.OrdinalIgnoreCase) >= 0, "ReadEdge must use TOP 1 for the edge lookup."); Check(overflow.IndexOf("SELECT TOP 1", StringComparison.OrdinalIgnoreCase) >= 0, "EJOverflow existence lookup must use TOP 1."); Check(properties.IndexOf("SELECT TOP 1", StringComparison.OrdinalIgnoreCase) >= 0, "JournalProperties lookup must use TOP 1.");
+    }
+
+    private static object InvokePrivate(EventProvider provider, string name, params object[] args)
+    {
+        MethodInfo method = typeof(EventProvider).GetMethod(name, BindingFlags.Instance | BindingFlags.Static | BindingFlags.NonPublic); if (method == null) throw new Exception("Missing private SQL builder: " + name); return method.Invoke(method.IsStatic ? null : (object)provider, args);
     }
 
     private static void ChunkedWriteStreamFramesData()
@@ -108,8 +136,8 @@ internal static class CoreTests
         string path = Path.Combine(Path.GetTempPath(), "dcs-service-config-" + Guid.NewGuid().ToString("N") + ".ini");
         try
         {
-            File.WriteAllText(path, "[Api]\r\nPort=18080\r\n[Historian]\r\nStreamWindowMinutes=60\r\n[Timeout]\r\nProviderSlotWaitSeconds=60\r\nSocketReadSeconds=60\r\nSocketWriteSeconds=120\r\n");
-            ServiceConfig config = IniConfigLoader.Load(path); Check(config.StreamWindowMinutes == 60 && config.ProviderSlotWaitSeconds == 60 && config.SocketWriteSeconds == 120, "Streaming timeout/window defaults must be loaded."); Check(config.HistoryMaxConcurrent == 2 && config.EventMaxConcurrent == 4 && config.RequestQueueLimit == 32, "Concurrency defaults must be 2/4/32.");
+            File.WriteAllText(path, "[Api]\r\nPort=18080\r\n[Historian]\r\nStreamWindowMinutes=60\r\n[Events]\r\nStreamWindowMinutes=30\r\n[Timeout]\r\nProviderSlotWaitSeconds=60\r\nSocketReadSeconds=60\r\nSocketWriteSeconds=120\r\n");
+            ServiceConfig config = IniConfigLoader.Load(path); Check(config.HistorianStreamWindowMinutes == 60 && config.EventStreamWindowMinutes == 30 && config.ProviderSlotWaitSeconds == 60 && config.SocketWriteSeconds == 120, "Independent streaming timeout/window settings must be loaded."); Check(config.HistoryMaxConcurrent == 2 && config.EventMaxConcurrent == 4 && config.RequestQueueLimit == 32, "Concurrency defaults must be 2/4/32.");
         }
         finally { if (File.Exists(path)) File.Delete(path); }
     }

@@ -24,7 +24,7 @@ namespace DcsDataService.Api.Handlers
             try
             {
                 gate = _c.HistoryGate.Enter(_c.Config.ProviderSlotWaitSeconds * 1000);
-                prepared = _c.Historian.PrepareRawStream(tag, from, to, _c.Config.HistorianReadChunkSamples, TimeSpan.FromMinutes(_c.Config.StreamWindowMinutes));
+                prepared = _c.Historian.PrepareRawStream(tag, from, to, _c.Config.HistorianReadChunkSamples, TimeSpan.FromMinutes(_c.Config.HistorianStreamWindowMinutes));
                 _c.Log.Info("History stream start tag=" + tag + " from=" + FormatDate(from) + " to=" + FormatDate(to));
 
                 HistorianProvider.HistorianStream streamForResponse = prepared;

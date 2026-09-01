@@ -33,7 +33,8 @@ namespace DcsDataService.Configuration
             c.ApiPort = Number(values, "Api.Port", c.ApiPort);
             c.HistoryMaxConcurrent = Number(values, "Concurrency.HistoryMaxConcurrent", c.HistoryMaxConcurrent); c.EventMaxConcurrent = Number(values, "Concurrency.EventMaxConcurrent", c.EventMaxConcurrent); c.RequestQueueLimit = Number(values, "Concurrency.RequestQueueLimit", c.RequestQueueLimit);
             c.HistorianReadChunkSamples = Number(values, "Historian.ReadChunkSamples", c.HistorianReadChunkSamples);
-            c.StreamWindowMinutes = Number(values, "Historian.StreamWindowMinutes", c.StreamWindowMinutes);
+            c.HistorianStreamWindowMinutes = Number(values, "Historian.StreamWindowMinutes", c.HistorianStreamWindowMinutes);
+            c.EventStreamWindowMinutes = Number(values, "Events.StreamWindowMinutes", c.EventStreamWindowMinutes);
             c.ProviderSlotWaitSeconds = Number(values, "Timeout.ProviderSlotWaitSeconds", c.ProviderSlotWaitSeconds);
             c.SocketReadSeconds = Number(values, "Timeout.SocketReadSeconds", c.SocketReadSeconds);
             c.SocketWriteSeconds = Number(values, "Timeout.SocketWriteSeconds", c.SocketWriteSeconds);

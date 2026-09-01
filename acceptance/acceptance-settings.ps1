@@ -28,8 +28,10 @@ $ApiBind = "127.0.0.1"
 $ApiPort = 18080
 $SourceTimeZone = "China Standard Time"
 
-# Internal streaming and socket settings used during acceptance.
-$StreamWindowMinutes = 60
+# Internal streaming and socket settings used during acceptance. Keep Event at
+# five minutes so the Event parity run proves multiple SQL windows.
+$HistorianStreamWindowMinutes = 60
+$EventStreamWindowMinutes = 5
 $ProviderSlotWaitSeconds = 60
 $SocketReadSeconds = 60
 $SocketWriteSeconds = 120

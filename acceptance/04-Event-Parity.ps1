@@ -4,6 +4,9 @@ Assert-ServiceRunning
 $runDir = Get-RunDirectory
 $exporter = Join-Path $ServiceRoot "bin\EventParityExport.exe"
 if (-not (Test-Path -LiteralPath $exporter)) { throw "Event reference exporter is missing. Run RUN-01-BUILD-PROBE.bat first." }
+$eventStartValue = [DateTime]::ParseExact($EventStart, "yyyy-MM-dd HH:mm:ss", [Globalization.CultureInfo]::InvariantCulture)
+$eventEndValue = [DateTime]::ParseExact($EventEnd, "yyyy-MM-dd HH:mm:ss", [Globalization.CultureInfo]::InvariantCulture)
+if ($EventStreamWindowMinutes -ge ($eventEndValue - $eventStartValue).TotalMinutes) { throw "EVENT WINDOWS NOT PROVEN: EventStreamWindowMinutes must be smaller than the acceptance range." }
 
 $artifactPrefix = "event"
 if ((Test-Path -LiteralPath (Join-Path $runDir "event-range-old.json")) -or

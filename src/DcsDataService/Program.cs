@@ -23,7 +23,7 @@ namespace DcsDataService
             {
                 ServiceConfig config = IniConfigLoader.Load(configPath); ServiceLog log = new ServiceLog(config.LogDirectory);
                 SourceTimeConverter time = new SourceTimeConverter(config.SourceTimeZone);
-                HistorianProvider historian = new HistorianProvider(config.HistorianServer, config.HistorianConnectionTimeoutSeconds, log, time); EventProvider events = new EventProvider(config);
+                HistorianProvider historian = new HistorianProvider(config.HistorianServer, config.HistorianConnectionTimeoutSeconds, log, time); EventProvider events = new EventProvider(config, log);
                 if (command == "probe") return Probe(config, historian, events, log);
                 HandlerContext context = new HandlerContext { Config = config, Historian = historian, Events = events, Log = log, Time = time, HistoryGate = new ConcurrencyGate(config.HistoryMaxConcurrent), EventGate = new ConcurrencyGate(config.EventMaxConcurrent) }; _server = new ApiServer(config, new Router(context), log);
                 Console.CancelKeyPress += delegate(object sender, ConsoleCancelEventArgs e) { e.Cancel = true; if (_server != null) _server.Stop(); };

@@ -38,6 +38,7 @@ namespace DcsDataService.Api.Handlers
                 sourceTo = QueryStringParser.RequiredDate(query, "to");
                 int frac = QueryStringParser.RequiredInt(query, "afterFracSec"); if (frac < Int16.MinValue || frac > Int16.MaxValue) throw new ArgumentException("afterFracSec must be inside SmallInt range.");
                 int ord = QueryStringParser.RequiredInt(query, "afterOrd"); sourceFrom = QueryStringParser.RequiredDate(query, "afterTime"); requestedGeneration = QueryStringParser.Required(query, "sourceGeneration");
+                if (sourceTo <= sourceFrom) throw new ArgumentException("to must be after afterTime.");
                 cursor = new EventCursor { DateTimeValue = _c.Time.SourceToRawUtc(sourceFrom), FracSec = Convert.ToInt16(frac), Ord = ord }; rawTo = _c.Time.SourceToRawUtc(sourceTo); rawFrom = cursor.DateTimeValue;
             }
 
@@ -47,11 +48,11 @@ namespace DcsDataService.Api.Handlers
                 gate = _c.EventGate.Enter(_c.Config.ProviderSlotWaitSeconds * 1000);
                 if (hasFrom)
                 {
-                    prepared = _c.Events.PrepareRangeStream(rawFrom, rawTo); generation = prepared.SourceGeneration; fileName = DownloadFileName.Events(sourceFrom, sourceTo);
+                    prepared = _c.Events.PrepareRangeStream(rawFrom, rawTo, TimeSpan.FromMinutes(_c.Config.EventStreamWindowMinutes)); generation = prepared.SourceGeneration; fileName = DownloadFileName.Events(sourceFrom, sourceTo);
                 }
                 else
                 {
-                    prepared = _c.Events.PrepareAfterStream(cursor, rawTo, requestedGeneration); generation = prepared.SourceGeneration; fileName = DownloadFileName.Events(sourceFrom, sourceTo);
+                    prepared = _c.Events.PrepareAfterStream(cursor, rawTo, requestedGeneration, TimeSpan.FromMinutes(_c.Config.EventStreamWindowMinutes)); generation = prepared.SourceGeneration; fileName = DownloadFileName.Events(sourceFrom, sourceTo);
                 }
 
                 _c.Log.Info("Event stream start from=" + FormatDate(sourceFrom) + " to=" + FormatDate(sourceTo) + " generation=" + generation);
@@ -74,7 +75,7 @@ namespace DcsDataService.Api.Handlers
                         {
                             csv.WriteRow(FormatDate(_c.Time.RawUtcToSource(record.DateTimeValue)), record.FracSec, record.Ord, record.EventType, record.EventSubType, record.Category, record.Area, record.Node, record.Unit, record.Module, record.ModuleDescription, record.Attribute, record.State, record.EventLevel, record.Desc1, record.Desc2, record.IsArchived);
                             rows++; if (rows % 1000 == 0) text.Flush();
-                        });
+                        }, delegate(DateTime windowStart, DateTime windowEnd, long windowRows) { text.Flush(); });
                         text.Flush(); clock.Stop();
                         _c.Log.Info("Event stream complete durationMs=" + clock.ElapsedMilliseconds.ToString(CultureInfo.InvariantCulture) + " rows=" + rows.ToString(CultureInfo.InvariantCulture) + " generation=" + generation);
                     }

@@ -12,7 +12,7 @@ Server=$HistorianServer
 ConnectionTimeoutSeconds=30
 TestTag=$HistoryTag
 ReadChunkSamples=$HistorySplitMaxSamples
-StreamWindowMinutes=$StreamWindowMinutes
+StreamWindowMinutes=$HistorianStreamWindowMinutes
 
 [Events]
 Server=$EventServer
@@ -21,6 +21,7 @@ Schema=$EventSchema
 Table=$EventTable
 CommandTimeoutSeconds=60
 RuntimeStateCacheSeconds=30
+StreamWindowMinutes=$EventStreamWindowMinutes
 
 [Api]
 Port=$ApiPort
@@ -58,6 +59,8 @@ HistorianServer=$HistorianServer
 HistoryTag=$HistoryTag
 EventServer=$EventServer
 EventDatabase=$EventDatabase
+HistorianStreamWindowMinutes=$HistorianStreamWindowMinutes
+EventStreamWindowMinutes=$EventStreamWindowMinutes
 GitCommit=$gitCommit
 "@
 Save-Text (Join-Path $runDir "00-environment.txt") $environment

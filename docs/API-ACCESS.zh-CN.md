@@ -64,14 +64,14 @@ Timestamp,Value,DataType,DeltaVStatus,ArchiveStatus,SequenceNo,IsHistoryHole,IsC
 
 1. 获得一个 History 并发槽；
 2. 解析 Tag、建立一个独立的 `DvCHReadConnection`，确认 Tag 状态为 `HistoryTagOK`；
-3. 将客户端范围切成 `StreamWindowMinutes`（默认 60 分钟）的内部窗口；
+3. 将客户端范围切成 `HistorianStreamWindowMinutes`（默认 60 分钟）的内部窗口；
 4. 每个窗口调用 `readRaw(maxSamples=ReadChunkSamples)`；
 5. 如果返回 `dataTruncated=true`，按时间二分，先处理 left，再处理 right，直到得到完整 segment；
 6. 对当前 segment normalize/dedup，跳过与上一条已输出记录完全相同的边界重复；
 7. 将当前 batch 立即写入 HTTP CSV 流，然后释放该 batch；
 8. 全部窗口完成后释放连接和并发槽。
 
-`ReadChunkSamples` 只是一次 DeltaV `readRaw` 的读取上限，`StreamWindowMinutes` 只是内部性能参数，两者都不是 API 返回数量上限。
+`ReadChunkSamples` 只是一次 DeltaV `readRaw` 的读取上限，`HistorianStreamWindowMinutes` 与 `EventStreamWindowMinutes` 是彼此独立的内部性能参数，都不是 API 返回数量上限。
 
 ## Event
 
@@ -89,7 +89,7 @@ GET /api/v1/events
 (Date_Time, FracSec, Ord) ASC
 ```
 
-没有 `TOP`、客户端行数参数、分页状态或下一页 Header。
+范围数据 SQL 没有分页用的 `TOP` 或客户端行数参数，也没有分页状态或下一页 Header。服务内部的 earliest/latest、JournalProperties 和 EJOverflow 存在性检查可以使用 `TOP 1`；这些不是数据分页。
 
 ### Cursor 模式
 
@@ -123,7 +123,7 @@ DateTime,FracSec,Ord,EventType,EventSubType,Category,Area,Node,Unit,Module,Modul
 
 每一行都包含 `DateTime,FracSec,Ord`。客户端完成一次同步后，可从 CSV 最后一行保存这三个字段以及 `X-DCS-Source-Generation`，作为下一轮 Cursor 请求的 checkpoint。
 
-Event 数据由 `SqlDataReader.Read()` 逐行转换为 domain model 并直接写入 CSV，不建立整个结果的 `List<EventRecord>`。
+Event 数据由 `SqlDataReader.Read()` 逐行转换为 domain model 并直接写入 CSV，不建立整个结果的 `List<EventRecord>`。服务端保留一个 SQL connection，并按 `Events.StreamWindowMinutes`（默认 60 分钟）依次执行独立的 command/reader；所有窗口使用 `[start,end)`，第一个 Cursor 窗口使用 after 条件，后续窗口使用普通 range 条件。`/api/v1/info` 会报告 `historyStreamWindowMinutes` 和 `eventStreamWindowMinutes`。
 
 ### 完整性保护
 

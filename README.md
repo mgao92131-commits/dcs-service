@@ -45,7 +45,7 @@ DateTime,FracSec,Ord,EventType,EventSubType,Category,Area,Node,Unit,Module,Modul
 
 CSV is UTF-8 without BOM, RFC-style escaped, and uses invariant number formatting. Data responses use HTTP/1.1 chunked transfer encoding. A successful response ends with the terminating chunk; a provider or socket failure after streaming starts closes the connection without that terminator, so the client must discard the partial file and retry the complete request.
 
-History keeps one Historian connection for the request, splits the requested range into `StreamWindowMinutes` windows, and recursively AutoSplits any truncated `readRaw` window. Only the current normalized segment and the previous emitted sample are retained. Event rows are read from `SqlDataReader` and written directly to the CSV stream.
+History keeps one Historian connection for the request, splits the requested range into `HistorianStreamWindowMinutes` windows, and recursively AutoSplits any truncated `readRaw` window. Only the current normalized segment and the previous emitted sample are retained. Event keeps one SQL connection, splits the requested range into `EventStreamWindowMinutes` half-open windows, executes one command/reader per window, and writes rows directly to the CSV stream.
 
 The response exposes `X-DCS-Tag`, `X-DCS-Source-TimeZone`, `X-DCS-From`, and `X-DCS-To` for History. Event responses expose `X-DCS-Source-TimeZone`, `X-DCS-Source-Generation`, and `X-DCS-To`. Row-count and pagination headers are intentionally absent; clients can count CSV rows locally. Event cursor fields are present in every CSV row and the final row can be stored as the next synchronization checkpoint.
 
@@ -70,6 +70,7 @@ Schema=dbo
 Table=Journal
 CommandTimeoutSeconds=60
 RuntimeStateCacheSeconds=30
+StreamWindowMinutes=60
 
 [Api]
 Port=18080
@@ -91,7 +92,7 @@ SourceTimeZone=China Standard Time
 Logs=logs
 ```
 
-`ReadChunkSamples` is only the maximum number supplied to one DeltaV `readRaw` call. `StreamWindowMinutes` is an internal performance setting, not an API data-size restriction. Event source safety checks (`IsFull`, `EJOverflow`, generation changes, retention gaps and cursor ordering) remain fail-closed.
+`ReadChunkSamples` is only the maximum number supplied to one DeltaV `readRaw` call. `Historian.StreamWindowMinutes` and `Events.StreamWindowMinutes` are independent internal performance settings, not API data-size restrictions. `/api/v1/info` reports them as `historyStreamWindowMinutes` and `eventStreamWindowMinutes`. Event source safety checks (`IsFull`, `EJOverflow`, generation changes, retention gaps and cursor ordering) remain fail-closed.
 
 ## Verification
 

@@ -129,10 +129,10 @@ namespace DcsDataService.DeltaV.Historian
         {
             try
             {
-                DateTime windowStart = stream.Start; HistorySample previousEmittedSample = null; long totalSamples = 0;
-                while (windowStart < stream.End)
+                HistorySample previousEmittedSample = null; long totalSamples = 0;
+                TimeWindowSplitter.ForEach(stream.Start, stream.End, stream.StreamWindow, delegate(DateTime windowStart, DateTime windowEnd)
                 {
-                    TimeSpan remaining = stream.End.Subtract(windowStart); DateTime windowEnd = remaining <= stream.StreamWindow ? stream.End : windowStart.Add(stream.StreamWindow); long windowSamples = 0;
+                    long windowSamples = 0;
                     ReadRecursive(stream.Connection, stream.ResolvedTag, windowStart, windowEnd, stream.ReadChunkSamples, 0, delegate(IList<HistorySample> normalized)
                     {
                         List<HistorySample> batch = new List<HistorySample>(normalized.Count);
@@ -146,8 +146,7 @@ namespace DcsDataService.DeltaV.Historian
                         windowSamples += batch.Count; totalSamples += batch.Count; onBatch(batch);
                     });
                     Log("History window complete tag=" + stream.ResolvedTag.Tag + " windowStart=" + FormatDate(windowStart) + " windowEnd=" + FormatDate(windowEnd) + " sampleCount=" + windowSamples.ToString(CultureInfo.InvariantCulture));
-                    windowStart = windowEnd;
-                }
+                });
                 Log("History stream provider complete tag=" + stream.ResolvedTag.Tag + " totalSamples=" + totalSamples.ToString(CultureInfo.InvariantCulture));
             }
             catch (HistorianException) { throw; }

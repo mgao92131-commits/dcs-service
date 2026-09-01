@@ -36,6 +36,12 @@ the actual deployment drive (for example Z:\DcsAgent) into a
 dedicated read-only exporter. It never compiles or invokes SyncEngine, spool,
 receiver, or checkpoint code.
 
+The generated config uses independent Historian and Event window sizes. The
+default acceptance settings use a five-minute Event window over a 30-minute
+range, so RUN-05-EVENT-PARITY crosses multiple SQL command/reader windows
+while still making one HTTP GET. The service log records each completed Event
+window and the final window count.
+
 The build stages the required DeltaV Historian DLL dependency closure from the
 configured DeltaVDllDir into bin beside DcsDataService.exe. These are ignored
 deployment artifacts from this DCS machine, not repository files. Never point

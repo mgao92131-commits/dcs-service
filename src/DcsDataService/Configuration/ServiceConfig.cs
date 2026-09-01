@@ -19,7 +19,8 @@ namespace DcsDataService.Configuration
         public int EventMaxConcurrent = 4;
         public int RequestQueueLimit = 32;
         public int HistorianReadChunkSamples = 10000;
-        public int StreamWindowMinutes = 60;
+        public int HistorianStreamWindowMinutes = 60;
+        public int EventStreamWindowMinutes = 60;
         public int ProviderSlotWaitSeconds = 60;
         public int SocketReadSeconds = 60;
         public int SocketWriteSeconds = 120;
@@ -35,7 +36,7 @@ namespace DcsDataService.Configuration
             Positive(ApiPort, "Api.Port"); Positive(HistorianConnectionTimeoutSeconds, "Historian.ConnectionTimeoutSeconds");
             Positive(EventsCommandTimeoutSeconds, "Events.CommandTimeoutSeconds"); Positive(EventsStateCacheSeconds, "Events.RuntimeStateCacheSeconds");
             Positive(HistoryMaxConcurrent, "Concurrency.HistoryMaxConcurrent"); Positive(EventMaxConcurrent, "Concurrency.EventMaxConcurrent"); Positive(RequestQueueLimit, "Concurrency.RequestQueueLimit");
-            Positive(HistorianReadChunkSamples, "Historian.ReadChunkSamples"); Positive(StreamWindowMinutes, "Historian.StreamWindowMinutes");
+            Positive(HistorianReadChunkSamples, "Historian.ReadChunkSamples"); Positive(HistorianStreamWindowMinutes, "Historian.StreamWindowMinutes"); Positive(EventStreamWindowMinutes, "Events.StreamWindowMinutes");
             Positive(ProviderSlotWaitSeconds, "Timeout.ProviderSlotWaitSeconds"); Positive(SocketReadSeconds, "Timeout.SocketReadSeconds"); Positive(SocketWriteSeconds, "Timeout.SocketWriteSeconds");
         }
 
