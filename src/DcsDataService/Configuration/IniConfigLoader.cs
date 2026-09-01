@@ -32,10 +32,11 @@ namespace DcsDataService.Configuration
             c.EventsStateCacheSeconds = Number(values, "Events.RuntimeStateCacheSeconds", c.EventsStateCacheSeconds);
             c.ApiPort = Number(values, "Api.Port", c.ApiPort);
             c.HistoryMaxConcurrent = Number(values, "Concurrency.HistoryMaxConcurrent", c.HistoryMaxConcurrent); c.EventMaxConcurrent = Number(values, "Concurrency.EventMaxConcurrent", c.EventMaxConcurrent); c.RequestQueueLimit = Number(values, "Concurrency.RequestQueueLimit", c.RequestQueueLimit);
-            c.MaxEventRows = Number(values, "ApiLimits.MaxEventRows", c.MaxEventRows);
-            c.MaxHistorySpanHours = Number(values, "ApiLimits.MaxHistorySpanHours", c.MaxHistorySpanHours);
-            c.HistorianReadChunkSamples = Number(values, "Historian.ReadChunkSamples", c.HistorianReadChunkSamples); c.RequestTimeoutSeconds = Number(values, "ApiLimits.RequestTimeoutSeconds", c.RequestTimeoutSeconds);
-            c.MaxSamplesPerHistoryRequest = Number(values, "ApiLimits.MaxSamplesPerHistoryRequest", c.MaxSamplesPerHistoryRequest);
+            c.HistorianReadChunkSamples = Number(values, "Historian.ReadChunkSamples", c.HistorianReadChunkSamples);
+            c.StreamWindowMinutes = Number(values, "Historian.StreamWindowMinutes", c.StreamWindowMinutes);
+            c.ProviderSlotWaitSeconds = Number(values, "Timeout.ProviderSlotWaitSeconds", c.ProviderSlotWaitSeconds);
+            c.SocketReadSeconds = Number(values, "Timeout.SocketReadSeconds", c.SocketReadSeconds);
+            c.SocketWriteSeconds = Number(values, "Timeout.SocketWriteSeconds", c.SocketWriteSeconds);
             c.SourceTimeZone = Text(values, "Time.SourceTimeZone", c.SourceTimeZone); c.LogDirectory = Text(values, "Files.Logs", c.LogDirectory);
             c.Validate(); return c;
         }

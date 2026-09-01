@@ -23,16 +23,16 @@ $EventTable = "Journal"
 # converts them to raw UTC only for the legacy DeltaVReader baseline.
 $EventStart = "2026-08-30 14:00:00"
 $EventEnd = "2026-08-30 14:30:00"
-$EventLimit = 50
 
 $ApiBind = "127.0.0.1"
 $ApiPort = 18080
 $SourceTimeZone = "China Standard Time"
 
-# Safety limits used during acceptance.
-$MaxHistorySpanHours = 24
-$MaxSamplesPerHistoryRequest = 50000
-$MaxEventRows = 5000
+# Internal streaming and socket settings used during acceptance.
+$StreamWindowMinutes = 60
+$ProviderSlotWaitSeconds = 60
+$SocketReadSeconds = 60
+$SocketWriteSeconds = 120
 
 # Existing verified event-agent source; it is compiled only into a read-only
 # parity exporter. No SyncEngine, spool, receiver, or checkpoint code is used.

@@ -12,6 +12,8 @@ using DeltaVEventSync.Agent.Models;
 // compiled directly from the existing sibling DcsAgent deployment.
 internal static class EventParityExport
 {
+    private const int LegacyReadBatchSize = 5000;
+
     public static int Main(string[] args)
     {
         try
@@ -24,12 +26,11 @@ internal static class EventParityExport
             config.SourceSchema = Required(options, "--schema");
             config.SourceTable = Required(options, "--table");
             config.CommandTimeoutSeconds = Number(options, "--timeout", 1, 600);
-            int limit = Number(options, "--limit", 1, 5000);
             DeltaVReader reader = new DeltaVReader(config);
             List<EventRecord> records;
             if (args[0] == "range")
             {
-                records = reader.ReadRange(Date(options, "--from"), Date(options, "--to"), null, limit);
+                records = ReadAllRange(reader, Date(options, "--from"), Date(options, "--to"));
             }
             else
             {
@@ -37,7 +38,7 @@ internal static class EventParityExport
                 cursor.DateTimeValue = Date(options, "--cursor-date");
                 cursor.FracSec = Convert.ToInt16(Number(options, "--cursor-frac", Int16.MinValue, Int16.MaxValue), CultureInfo.InvariantCulture);
                 cursor.Ord = Number(options, "--cursor-ord", Int32.MinValue, Int32.MaxValue);
-                records = reader.ReadAfter(cursor, limit);
+                records = ReadAllAfter(reader, cursor, Date(options, "--to"));
             }
             List<object> wire = new List<object>();
             for (int i = 0; i < records.Count; i++)
@@ -56,6 +57,34 @@ internal static class EventParityExport
         catch (Exception ex) { Console.Error.WriteLine("EVENT REFERENCE EXPORT FAILED: " + ex.Message); return 1; }
     }
 
+    private static List<EventRecord> ReadAllRange(DeltaVReader reader, DateTime from, DateTime to)
+    {
+        List<EventRecord> result = new List<EventRecord>(); SyncCursor after = null;
+        while (true)
+        {
+            List<EventRecord> page = reader.ReadRange(from, to, after, LegacyReadBatchSize); if (page.Count == 0) break; result.AddRange(page);
+            SyncCursor next = Cursor(page[page.Count - 1]); if (after != null && Compare(after, next) >= 0) throw new InvalidOperationException("Legacy range cursor did not advance."); after = next;
+            if (page.Count < LegacyReadBatchSize) break;
+        }
+        return result;
+    }
+
+    private static List<EventRecord> ReadAllAfter(DeltaVReader reader, SyncCursor cursor, DateTime to)
+    {
+        List<EventRecord> result = new List<EventRecord>(); SyncCursor after = cursor;
+        while (true)
+        {
+            List<EventRecord> page = reader.ReadAfter(after, LegacyReadBatchSize); if (page.Count == 0) break; bool reachedEnd = false;
+            for (int i = 0; i < page.Count; i++) { if (page[i].DateTimeValue >= to) { reachedEnd = true; break; } result.Add(page[i]); }
+            if (reachedEnd || page.Count < LegacyReadBatchSize) break;
+            SyncCursor next = Cursor(page[page.Count - 1]); if (Compare(after, next) >= 0) throw new InvalidOperationException("Legacy after cursor did not advance."); after = next;
+        }
+        return result;
+    }
+
+    private static SyncCursor Cursor(EventRecord value) { SyncCursor result = new SyncCursor(); result.DateTimeValue = value.DateTimeValue; result.FracSec = value.FracSec; result.Ord = value.Ord; return result; }
+    private static int Compare(SyncCursor a, SyncCursor b) { int value = a.DateTimeValue.CompareTo(b.DateTimeValue); if (value != 0) return value; value = a.FracSec.CompareTo(b.FracSec); return value != 0 ? value : a.Ord.CompareTo(b.Ord); }
+
     private static Dictionary<string, string> Parse(string[] args)
     {
         Dictionary<string, string> result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -69,6 +98,5 @@ internal static class EventParityExport
     private static string Required(Dictionary<string, string> options, string name) { string value; if (!options.TryGetValue(name, out value) || String.IsNullOrEmpty(value)) throw new ArgumentException(name + " is required."); return value; }
     private static int Number(Dictionary<string, string> options, string name, int min, int max) { int value; if (!Int32.TryParse(Required(options, name), NumberStyles.Integer, CultureInfo.InvariantCulture, out value) || value < min || value > max) throw new ArgumentException(name + " is outside its allowed range."); return value; }
     private static DateTime Date(Dictionary<string, string> options, string name) { DateTime value; if (!DateTime.TryParseExact(Required(options, name), new[] { "yyyy-MM-dd HH:mm:ss", "yyyy-MM-ddTHH:mm:ss.fff", "yyyy-MM-ddTHH:mm:ss.fffffff" }, CultureInfo.InvariantCulture, DateTimeStyles.None, out value)) throw new ArgumentException(name + " must be a source-local DeltaV timestamp."); return value; }
-    private static void Usage() { Console.WriteLine("EventParityExport range --server S --database D --schema dbo --table Journal --timeout 30 --from TIME --to TIME --limit N --out FILE"); Console.WriteLine("EventParityExport after --server S --database D --schema dbo --table Journal --timeout 30 --cursor-date TIME --cursor-frac N --cursor-ord N --limit N --out FILE"); }
+    private static void Usage() { Console.WriteLine("EventParityExport range --server S --database D --schema dbo --table Journal --timeout 30 --from TIME --to TIME --out FILE"); Console.WriteLine("EventParityExport after --server S --database D --schema dbo --table Journal --timeout 30 --cursor-date TIME --cursor-frac N --cursor-ord N --to TIME --out FILE"); }
 }
-

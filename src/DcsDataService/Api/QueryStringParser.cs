@@ -37,12 +37,6 @@ namespace DcsDataService.Api
             return DateTime.SpecifyKind(parsed, DateTimeKind.Unspecified);
         }
 
-        public static int OptionalInt(IDictionary<string, string> values, string name, int defaultValue)
-        {
-            string value; int parsed; if (!values.TryGetValue(name, out value)) return defaultValue;
-            if (!Int32.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out parsed)) throw new ArgumentException(name + " must be an integer."); return parsed;
-        }
-
         public static int RequiredInt(IDictionary<string, string> values, string name)
         {
             string value = Required(values, name); int parsed; if (!Int32.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out parsed)) throw new ArgumentException(name + " must be an integer."); return parsed;

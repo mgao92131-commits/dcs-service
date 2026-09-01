@@ -9,6 +9,7 @@ Server=APP
 ConnectionTimeoutSeconds=1
 TestTag=TEST
 ReadChunkSamples=10
+StreamWindowMinutes=60
 [Events]
 Server=invalid
 Database=invalid
@@ -22,11 +23,10 @@ Port=$Port
 HistoryMaxConcurrent=2
 EventMaxConcurrent=4
 RequestQueueLimit=8
-[ApiLimits]
-MaxEventRows=10
-MaxHistorySpanHours=1
-MaxSamplesPerHistoryRequest=20
-RequestTimeoutSeconds=2
+[Timeout]
+ProviderSlotWaitSeconds=2
+SocketReadSeconds=2
+SocketWriteSeconds=2
 [Time]
 SourceTimeZone=China Standard Time
 [Files]
@@ -41,8 +41,10 @@ try {
     $r = Invoke-Raw "POST /api/v1/history/query HTTP/1.1`r`nHost: localhost`r`nContent-Length: 0`r`n`r`n"; if ($r -notmatch "HTTP/1.1 404") { throw "old history route was not removed: $r" }
     $r = Invoke-Raw "GET /api/v1/history?tag=A&from=2026-08-30T10%3A00%3A00&to=2026-08-30T09%3A00%3A00 HTTP/1.1`r`nHost: localhost`r`n`r`n"; if ($r -notmatch "HTTP/1.1 400" -or $r -notmatch "application/json") { throw "history validation failed: $r" }
     $r = Invoke-Raw "GET /api/v1/events?from=2026-08-30T08%3A00%3A00&to=2026-08-30T09%3A00%3A00&afterTime=2026-08-30T08%3A00%3A00&afterFracSec=1&afterOrd=1 HTTP/1.1`r`nHost: localhost`r`n`r`n"; if ($r -notmatch "HTTP/1.1 400") { throw "event mode exclusivity failed: $r" }
+    $r = Invoke-Raw "GET /api/v1/events?afterTime=2026-08-30T08%3A00%3A00&afterFracSec=1&afterOrd=1&sourceGeneration=G HTTP/1.1`r`nHost: localhost`r`n`r`n"; if ($r -notmatch "HTTP/1.1 400") { throw "event cursor without to was accepted: $r" }
     $r = Invoke-Raw "GET /api/v1/tag?tag=A HTTP/1.1`r`nHost: localhost`r`n`r`n"; if ($r -notmatch "HTTP/1.1 503" -or $r -notmatch "historian_unavailable") { throw "Historian unavailable test failed: $r" }
-    $r = Invoke-Raw "GET /api/v1/events?from=2026-08-30T08%3A00%3A00&to=2026-08-30T09%3A00%3A00&limit=1 HTTP/1.1`r`nHost: localhost`r`n`r`n"; if ($r -notmatch "HTTP/1.1 503" -or $r -notmatch "event_unavailable") { throw "Event unavailable test failed: $r" }
+    $r = Invoke-Raw "GET /api/v1/events?from=2026-08-30T08%3A00%3A00&to=2026-08-30T09%3A00%3A00&limit=1 HTTP/1.1`r`nHost: localhost`r`n`r`n"; if ($r -notmatch "HTTP/1.1 400" -or $r -notmatch "invalid_request") { throw "Removed event limit was not rejected: $r" }
+    $r = Invoke-Raw "GET /api/v1/events?from=2026-08-30T08%3A00%3A00&to=2026-08-30T09%3A00%3A00 HTTP/1.1`r`nHost: localhost`r`n`r`n"; if ($r -notmatch "HTTP/1.1 503" -or $r -notmatch "event_unavailable") { throw "Event unavailable test failed: $r" }
     $held = @()
     try {
         for ($i=0; $i -lt 8; $i++) { $client = New-Object Net.Sockets.TcpClient("127.0.0.1", $Port); $bytes=[Text.Encoding]::ASCII.GetBytes("GET /health HTTP/1.1`r`n"); $client.GetStream().Write($bytes,0,$bytes.Length); $held += $client }

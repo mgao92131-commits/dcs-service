@@ -12,7 +12,7 @@ and DeltaV DLL directory. Use source-local DeltaV times; do not append Z.
 All public API request and response times are Beijing source-local values. The
 parity runner converts those values to raw UTC only when invoking the legacy
 HistoryReader/DeltaVReader baseline. Choose a completed Event window with at
-least EventLimit rows and leave at least EventLimit later rows for After.
+least two rows so the After check can use the first CSV row as its checkpoint.
 
 Run in this exact order:
 
@@ -27,9 +27,9 @@ Run in this exact order:
 Stop when a step fails; do not skip a failed gate. AutoSplit is accepted only
 if the new service returns more rows than the configured per-read maximum and
 every row matches legacy HistoryReader output. If AUTOSPLIT NOT PROVEN appears,
-extend the interval or choose a denser tag without exceeding configured limits.
-If the API returns HTTP 413 query_too_large, shorten HistorySplitStart/End; do
-not raise MaxSamplesPerHistoryRequest merely to make an acceptance test pass.
+extend the interval or choose a denser tag so the configured ReadChunkSamples
+value is exceeded. The service does not impose a total History sample or span
+limit.
 
 Event parity compiles DeltaVReader.cs from the sibling DcsAgent directory on
 the actual deployment drive (for example Z:\DcsAgent) into a

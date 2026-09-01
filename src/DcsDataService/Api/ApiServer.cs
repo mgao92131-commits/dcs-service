@@ -32,26 +32,25 @@ namespace DcsDataService.Api
         private void HandleClient(TcpClient client)
         {
             Stopwatch clock = Stopwatch.StartNew(); string method = "?"; string path = "?"; int status = 500;
-            NetworkStream stream = null;
+            NetworkStream stream = null; HttpResponse response = null;
             try
             {
-                client.ReceiveTimeout = _config.RequestTimeoutSeconds * 1000; client.SendTimeout = _config.RequestTimeoutSeconds * 1000;
-                stream = client.GetStream(); HttpRequest request = ReadRequest(stream); method = request.Method; path = request.Path;
-                HttpResponse response = _router.RouteRequest(request); status = response.StatusCode; Write(stream, response);
+                client.ReceiveTimeout = _config.SocketReadSeconds * 1000; client.SendTimeout = _config.SocketWriteSeconds * 1000;
+                stream = client.GetStream(); stream.ReadTimeout = _config.SocketReadSeconds * 1000; stream.WriteTimeout = _config.SocketWriteSeconds * 1000; HttpRequest request = ReadRequest(stream); method = request.Method; path = request.Path;
+                response = _router.RouteRequest(request); status = response.StatusCode; Write(stream, response);
             }
-            catch (RequestTooLargeException ex) { status = 413; SafeWrite(stream, Error(status, "request_too_large", ex.Message)); }
-            catch (RouteException ex) { status = ex.Status; SafeWrite(stream, Error(status, ex.Code, ex.Message)); }
-            catch (ArgumentException ex) { status = 400; SafeWrite(stream, Error(status, "invalid_request", ex.Message)); }
-            catch (FileNotFoundException ex) { status = 503; _log.Error("Historian DLL failure", ex); SafeWrite(stream, Error(status, "historian_unavailable", "Historian DLL is unavailable.")); }
-            catch (IOException ex) { status = 400; _log.Error("HTTP read failure or timeout", ex); SafeWrite(stream, Error(status, "request_timeout", "Request was incomplete or timed out.")); }
-            catch (HistorianException ex) { status = 503; _log.Error("Historian failure", ex); SafeWrite(stream, Error(status, "historian_unavailable", "Historian is unavailable.")); }
-            catch (HistoryQueryTooLargeException ex) { status = 413; _log.Error("History query limit", ex); SafeWrite(stream, Error(status, "history_query_too_large", ex.Message)); }
-            catch (ConcurrencyGateTimeoutException ex) { status = 503; _log.Error("Provider concurrency wait timeout", ex); SafeWrite(stream, Error(status, "service_busy", "Timed out waiting for a provider slot.")); }
-            catch (EventSourceUnsafeException ex) { status = 503; _log.Error("Event source unsafe", ex); SafeWrite(stream, Error(status, ex.ErrorCode, ex.Message)); }
-            catch (EventCursorException ex) { status = 409; _log.Error("Event cursor rejected", ex); SafeWrite(stream, Error(status, ex.ErrorCode, ex.Message)); }
-            catch (SqlException ex) { status = 503; _log.Error("Event SQL failure", ex); SafeWrite(stream, Error(status, "event_unavailable", "Event Journal is unavailable.")); }
-            catch (InvalidOperationException ex) { status = 503; _log.Error("Event source failure", ex); SafeWrite(stream, Error(status, "event_unavailable", "Event Journal is unavailable or unsafe.")); }
-            catch (Exception ex) { status = 500; _log.Error("Unhandled API error", ex); SafeWrite(stream, Error(status, "internal_error", "Internal server error.")); }
+            catch (RequestTooLargeException ex) { ReplyOrAbort(response, stream, 413, Error(413, "request_too_large", ex.Message), "HTTP request too large", ex, ref status); }
+            catch (RouteException ex) { ReplyOrAbort(response, stream, ex.Status, Error(ex.Status, ex.Code, ex.Message), "HTTP route failure", ex, ref status); }
+            catch (ArgumentException ex) { ReplyOrAbort(response, stream, 400, Error(400, "invalid_request", ex.Message), "HTTP request validation failure", ex, ref status); }
+            catch (FileNotFoundException ex) { ReplyOrAbort(response, stream, 503, Error(503, "historian_unavailable", "Historian DLL is unavailable."), "Historian DLL failure", ex, ref status); }
+            catch (IOException ex) { ReplyOrAbort(response, stream, 400, Error(400, "request_timeout", "Request was incomplete or timed out."), "HTTP read/write failure or timeout", ex, ref status); }
+            catch (HistorianException ex) { ReplyOrAbort(response, stream, 503, Error(503, "historian_unavailable", "Historian is unavailable."), "Historian failure", ex, ref status); }
+            catch (ConcurrencyGateTimeoutException ex) { ReplyOrAbort(response, stream, 503, Error(503, "service_busy", "Timed out waiting for a provider slot."), "Provider concurrency wait timeout", ex, ref status); }
+            catch (EventSourceUnsafeException ex) { ReplyOrAbort(response, stream, 503, Error(503, ex.ErrorCode, ex.Message), "Event source unsafe", ex, ref status); }
+            catch (EventCursorException ex) { ReplyOrAbort(response, stream, 409, Error(409, ex.ErrorCode, ex.Message), "Event cursor rejected", ex, ref status); }
+            catch (SqlException ex) { ReplyOrAbort(response, stream, 503, Error(503, "event_unavailable", "Event Journal is unavailable."), "Event SQL failure", ex, ref status); }
+            catch (InvalidOperationException ex) { ReplyOrAbort(response, stream, 503, Error(503, "event_unavailable", "Event Journal is unavailable or unsafe."), "Event source failure", ex, ref status); }
+            catch (Exception ex) { ReplyOrAbort(response, stream, 500, Error(500, "internal_error", "Internal server error."), "Unhandled API error", ex, ref status); }
             finally { clock.Stop(); _log.Info("API method=" + method + " path=" + path + " status=" + status.ToString(CultureInfo.InvariantCulture) + " durationMs=" + clock.ElapsedMilliseconds.ToString(CultureInfo.InvariantCulture)); try { if (stream != null) stream.Close(); } catch { } try { client.Close(); } catch { } }
         }
         private HttpRequest ReadRequest(NetworkStream stream)
@@ -66,6 +65,11 @@ namespace DcsDataService.Api
         private static HttpResponse Error(int status, string code, string message) { return new HttpResponse { StatusCode = status, Body = JsonUtil.Serialize(ApiResponse.Failure(code, message)) }; }
         private static void Write(Stream stream, HttpResponse response) { response.WriteTo(stream); }
         private static void SafeWrite(Stream stream, HttpResponse response) { try { if (stream != null) Write(stream, response); } catch { } }
+        private void ReplyOrAbort(HttpResponse response, NetworkStream stream, int errorStatus, HttpResponse error, string message, Exception exception, ref int status)
+        {
+            if (response != null && response.IsStarted) { status = response.StatusCode; _log.Error(message + " after response started; closing incomplete response", exception); return; }
+            status = errorStatus; _log.Error(message, exception); SafeWrite(stream, error);
+        }
         private static void RejectBusy(TcpClient client) { try { NetworkStream stream = client.GetStream(); byte[] discard = new byte[1024]; while (stream.DataAvailable) stream.Read(discard, 0, discard.Length); Write(stream, Error(429, "service_busy", "DCS data service request queue is full.")); try { client.Client.Shutdown(SocketShutdown.Send); } catch { } } catch { } finally { try { client.Close(); } catch { } } }
     }
 }

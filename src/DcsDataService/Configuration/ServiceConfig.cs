@@ -12,17 +12,17 @@ namespace DcsDataService.Configuration
         public string EventsDatabase = "EventJournal";
         public string EventsSchema = "dbo";
         public string EventsTable = "Journal";
-        public int EventsCommandTimeoutSeconds = 30;
+        public int EventsCommandTimeoutSeconds = 60;
         public int EventsStateCacheSeconds = 30;
         public int ApiPort = 18080;
         public int HistoryMaxConcurrent = 2;
         public int EventMaxConcurrent = 4;
         public int RequestQueueLimit = 32;
-        public int MaxEventRows = 5000;
-        public int MaxHistorySpanHours = 24;
         public int HistorianReadChunkSamples = 10000;
-        public int MaxSamplesPerHistoryRequest = 50000;
-        public int RequestTimeoutSeconds = 60;
+        public int StreamWindowMinutes = 60;
+        public int ProviderSlotWaitSeconds = 60;
+        public int SocketReadSeconds = 60;
+        public int SocketWriteSeconds = 120;
         public string SourceTimeZone = "China Standard Time";
         public string LogDirectory = "logs";
 
@@ -35,9 +35,8 @@ namespace DcsDataService.Configuration
             Positive(ApiPort, "Api.Port"); Positive(HistorianConnectionTimeoutSeconds, "Historian.ConnectionTimeoutSeconds");
             Positive(EventsCommandTimeoutSeconds, "Events.CommandTimeoutSeconds"); Positive(EventsStateCacheSeconds, "Events.RuntimeStateCacheSeconds");
             Positive(HistoryMaxConcurrent, "Concurrency.HistoryMaxConcurrent"); Positive(EventMaxConcurrent, "Concurrency.EventMaxConcurrent"); Positive(RequestQueueLimit, "Concurrency.RequestQueueLimit");
-            Positive(MaxEventRows, "ApiLimits.MaxEventRows");
-            Positive(MaxHistorySpanHours, "ApiLimits.MaxHistorySpanHours"); Positive(HistorianReadChunkSamples, "Historian.ReadChunkSamples"); Positive(MaxSamplesPerHistoryRequest, "ApiLimits.MaxSamplesPerHistoryRequest");
-            Positive(RequestTimeoutSeconds, "ApiLimits.RequestTimeoutSeconds");
+            Positive(HistorianReadChunkSamples, "Historian.ReadChunkSamples"); Positive(StreamWindowMinutes, "Historian.StreamWindowMinutes");
+            Positive(ProviderSlotWaitSeconds, "Timeout.ProviderSlotWaitSeconds"); Positive(SocketReadSeconds, "Timeout.SocketReadSeconds"); Positive(SocketWriteSeconds, "Timeout.SocketWriteSeconds");
         }
 
         private static void Positive(int value, string name) { if (value <= 0) throw new ConfigurationException(name + " must be positive."); }

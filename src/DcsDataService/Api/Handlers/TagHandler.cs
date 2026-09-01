@@ -10,7 +10,7 @@ namespace DcsDataService.Api.Handlers
         public HttpResponse Handle(HttpRequest request)
         {
             IDictionary<string, string> query = QueryStringParser.Parse(request.QueryString); string tag = QueryStringParser.Required(query, "tag");
-            using (_c.HistoryGate.Enter(_c.Config.RequestTimeoutSeconds * 1000))
+            using (_c.HistoryGate.Enter(_c.Config.ProviderSlotWaitSeconds * 1000))
             {
                 IList<HistoryTagInfo> resolved = _c.Historian.ResolveTags(new List<string> { tag }); HistoryTagInfo info = resolved[0];
                 _c.Log.Info("Tag resolve tag=" + tag + " status=" + info.Status);

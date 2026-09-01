@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Runtime.InteropServices.ComTypes;
+using System.Threading;
 using DeltaV.Historian.Data;
 using DeltaV.Historian.DvCHDataAccess;
 using DcsDataService.Util;
@@ -13,7 +14,7 @@ namespace DcsDataService.DeltaV.Historian
     public sealed class HistorianProvider
     {
         private const int MaxSplitDepth = 20;
-        private static readonly TimeSpan MinimumSlice = TimeSpan.FromSeconds(2);
+        private static readonly TimeSpan MinimumSlice = TimeSpan.FromTicks(1);
         private static readonly object InitializeGate = new object();
         private static bool _initialized;
         private readonly object _tagCacheGate = new object();
@@ -57,47 +58,109 @@ namespace DcsDataService.DeltaV.Historian
             finally { Close(id); }
         }
 
-        public IList<HistorySample> ReadRaw(string tag, DateTime start, DateTime end, int maxSamples)
+        public void ReadRawStream(string tag, DateTime start, DateTime end, int readChunkSamples, TimeSpan streamWindow, Action<IList<HistorySample>> onBatch)
         {
-            IDictionary<string, IList<HistorySample>> result = ReadRaw(new List<string> { tag }, start, end, maxSamples, Int32.MaxValue);
-            return result[tag];
+            if (onBatch == null) throw new ArgumentNullException("onBatch");
+            using (HistorianStream stream = PrepareRawStream(tag, start, end, readChunkSamples, streamWindow)) stream.Stream(onBatch);
         }
 
-        public IDictionary<string, IList<HistorySample>> ReadRaw(IList<string> tags, DateTime start, DateTime end, int maxSamples)
+        public HistorianStream PrepareRawStream(string tag, DateTime start, DateTime end, int readChunkSamples, TimeSpan streamWindow)
         {
-            return ReadRaw(tags, start, end, maxSamples, Int32.MaxValue);
-        }
-
-        public IDictionary<string, IList<HistorySample>> ReadRaw(IList<string> tags, DateTime start, DateTime end, int maxSamples, int maxTotalSamples)
-        {
-            if (tags == null) throw new ArgumentNullException("tags");
-            if (tags.Count == 0) throw new ArgumentException("At least one tag is required.", "tags");
-            if (end <= start) throw new ArgumentException("End time must be after start time.");
-            if (maxSamples < 1) throw new ArgumentOutOfRangeException("maxSamples");
-            if (maxTotalSamples < 1) throw new ArgumentOutOfRangeException("maxTotalSamples");
-            Dictionary<string, bool> unique = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase); for (int i = 0; i < tags.Count; i++) { if (String.IsNullOrEmpty(tags[i])) throw new ArgumentException("Tag names cannot be empty.", "tags"); if (unique.ContainsKey(tags[i])) throw new ArgumentException("Duplicate tag: " + tags[i], "tags"); unique.Add(tags[i], true); }
-            int id = -1;
+            ValidateStreamArguments(tag, start, end, readChunkSamples, streamWindow);
+            int id = -1; HistorianStream result = null;
             try
             {
                 DvCHReadConnection connection = Open(out id);
-                IList<HistoryTagInfo> resolved = ResolveTagsConnected(connection, tags);
-                Dictionary<string, IList<HistorySample>> result = new Dictionary<string, IList<HistorySample>>(StringComparer.OrdinalIgnoreCase);
-                HistorySampleBudget budget = new HistorySampleBudget(maxTotalSamples);
-                for (int i = 0; i < resolved.Count; i++)
-                {
-                    HistoryTagInfo info = resolved[i];
-                    if (info.Status != HistoryTagStatus.HistoryTagOK) throw new ArgumentException("Tag is " + info.Status + ": " + info.Tag, "tags");
-                    List<HistorySample> rows = new List<HistorySample>();
-                    ReadRecursive(connection, info, start, end, maxSamples, 0, rows, budget);
-                    result[info.Tag] = Normalize(rows);
-                }
+                HistoryTagInfo info = ResolveTagsConnected(connection, new List<string> { tag })[0];
+                if (info.Status != HistoryTagStatus.HistoryTagOK) throw new ArgumentException("Tag is " + info.Status + ": " + info.Tag, "tag");
+                result = new HistorianStream(this, connection, id, info, start, end, readChunkSamples, streamWindow); id = -1;
+                Log("History stream prepared tag=" + tag + " from=" + FormatDate(start) + " to=" + FormatDate(end));
                 return result;
             }
             catch (HistorianException) { throw; }
-            catch (HistoryQueryTooLargeException) { throw; }
             catch (ArgumentException) { throw; }
-            catch (Exception ex) { Failure("Historian raw read failure", ex); throw Wrap("Historian raw read failed.", ex); }
-            finally { Close(id); }
+            catch (Exception ex) { Failure("Historian stream preparation failure", ex); throw Wrap("Historian stream preparation failed.", ex); }
+            finally { if (id >= 0) Close(id); }
+        }
+
+        public sealed class HistorianStream : IDisposable
+        {
+            private readonly HistorianProvider _owner;
+            private readonly DvCHReadConnection _connection;
+            private readonly HistoryTagInfo _tag;
+            private readonly DateTime _start;
+            private readonly DateTime _end;
+            private readonly int _readChunkSamples;
+            private readonly TimeSpan _streamWindow;
+            private int _connectionId;
+            private int _streamed;
+
+            internal HistorianStream(HistorianProvider owner, DvCHReadConnection connection, int connectionId, HistoryTagInfo tag, DateTime start, DateTime end, int readChunkSamples, TimeSpan streamWindow)
+            {
+                _owner = owner; _connection = connection; _connectionId = connectionId; _tag = tag; _start = start; _end = end; _readChunkSamples = readChunkSamples; _streamWindow = streamWindow;
+            }
+
+            public string Tag { get { return _tag.Tag; } }
+            public HistoryTagInfo TagInfo { get { return _tag; } }
+            internal DvCHReadConnection Connection { get { return _connection; } }
+            internal HistoryTagInfo ResolvedTag { get { return _tag; } }
+            internal DateTime Start { get { return _start; } }
+            internal DateTime End { get { return _end; } }
+            internal int ReadChunkSamples { get { return _readChunkSamples; } }
+            internal TimeSpan StreamWindow { get { return _streamWindow; } }
+
+            public void Stream(Action<IList<HistorySample>> onBatch)
+            {
+                if (onBatch == null) throw new ArgumentNullException("onBatch");
+                if (_connectionId < 0) throw new ObjectDisposedException("HistorianStream");
+                if (Interlocked.Exchange(ref _streamed, 1) != 0) throw new InvalidOperationException("HistorianStream can only be consumed once.");
+                try { _owner.StreamPrepared(this, onBatch); }
+                catch { Dispose(); throw; }
+            }
+
+            public void Dispose()
+            {
+                int id = Interlocked.Exchange(ref _connectionId, -1);
+                if (id >= 0) _owner.Close(id);
+            }
+        }
+
+        private void StreamPrepared(HistorianStream stream, Action<IList<HistorySample>> onBatch)
+        {
+            try
+            {
+                DateTime windowStart = stream.Start; HistorySample previousEmittedSample = null; long totalSamples = 0;
+                while (windowStart < stream.End)
+                {
+                    TimeSpan remaining = stream.End.Subtract(windowStart); DateTime windowEnd = remaining <= stream.StreamWindow ? stream.End : windowStart.Add(stream.StreamWindow); long windowSamples = 0;
+                    ReadRecursive(stream.Connection, stream.ResolvedTag, windowStart, windowEnd, stream.ReadChunkSamples, 0, delegate(IList<HistorySample> normalized)
+                    {
+                        List<HistorySample> batch = new List<HistorySample>(normalized.Count);
+                        for (int i = 0; i < normalized.Count; i++)
+                        {
+                            HistorySample sample = normalized[i];
+                            if (previousEmittedSample != null && SameSample(previousEmittedSample, sample)) continue;
+                            batch.Add(sample); previousEmittedSample = sample;
+                        }
+                        if (batch.Count == 0) return;
+                        windowSamples += batch.Count; totalSamples += batch.Count; onBatch(batch);
+                    });
+                    Log("History window complete tag=" + stream.ResolvedTag.Tag + " windowStart=" + FormatDate(windowStart) + " windowEnd=" + FormatDate(windowEnd) + " sampleCount=" + windowSamples.ToString(CultureInfo.InvariantCulture));
+                    windowStart = windowEnd;
+                }
+                Log("History stream provider complete tag=" + stream.ResolvedTag.Tag + " totalSamples=" + totalSamples.ToString(CultureInfo.InvariantCulture));
+            }
+            catch (HistorianException) { throw; }
+            catch (ArgumentException) { throw; }
+            catch (Exception ex) { Failure("Historian raw stream failure", ex); throw Wrap("Historian raw stream failed.", ex); }
+        }
+
+        private static void ValidateStreamArguments(string tag, DateTime start, DateTime end, int readChunkSamples, TimeSpan streamWindow)
+        {
+            if (String.IsNullOrEmpty(tag)) throw new ArgumentException("Tag is required.", "tag");
+            if (end <= start) throw new ArgumentException("End time must be after start time.");
+            if (readChunkSamples < 1) throw new ArgumentOutOfRangeException("readChunkSamples");
+            if (streamWindow <= TimeSpan.Zero) throw new ArgumentOutOfRangeException("streamWindow");
         }
 
         private DvCHReadConnection Open(out int id)
@@ -146,17 +209,18 @@ namespace DcsDataService.DeltaV.Historian
             return HistoryTagStatus.Error;
         }
 
-        private void ReadRecursive(DvCHReadConnection connection, HistoryTagInfo tag, DateTime start, DateTime end, int maxSamples, int depth, List<HistorySample> output, HistorySampleBudget budget)
+        private void ReadRecursive(DvCHReadConnection connection, HistoryTagInfo tag, DateTime start, DateTime end, int maxSamples, int depth, Action<IList<HistorySample>> onBatch)
         {
             RawSegment segment = ReadSegment(connection, tag, start, end, maxSamples);
             if (segment.Truncated && depth < MaxSplitDepth && end.Subtract(start) > MinimumSlice)
             {
                 DateTime middle = start.AddTicks((end.Ticks - start.Ticks) / 2);
-                ReadRecursive(connection, tag, start, middle, maxSamples, depth + 1, output, budget);
-                ReadRecursive(connection, tag, middle, end, maxSamples, depth + 1, output, budget); return;
+                segment.Rows.Clear();
+                ReadRecursive(connection, tag, start, middle, maxSamples, depth + 1, onBatch);
+                ReadRecursive(connection, tag, middle, end, maxSamples, depth + 1, onBatch); return;
             }
             if (segment.Truncated) throw new HistorianException("Historian result remained truncated at depth " + depth.ToString(CultureInfo.InvariantCulture) + " for " + start.ToString("o", CultureInfo.InvariantCulture) + " to " + end.ToString("o", CultureInfo.InvariantCulture) + "; incomplete data was rejected.");
-            budget.Add(segment.Rows.Count); output.AddRange(segment.Rows);
+            IList<HistorySample> normalized = Normalize(segment.Rows); if (normalized.Count > 0) onBatch(normalized);
         }
 
         private RawSegment ReadSegment(DvCHReadConnection connection, HistoryTagInfo tag, DateTime start, DateTime end, int maxSamples)
@@ -186,21 +250,29 @@ namespace DcsDataService.DeltaV.Historian
         private FILETIME ToHistorianFileTime(DateTime sourceTime)
         {
             long value = _time.SourceToRawUtc(sourceTime).ToFileTimeUtc();
-            FILETIME result = new FILETIME();
-            result.dwLowDateTime = unchecked((int)(value & 0xFFFFFFFFL));
-            result.dwHighDateTime = unchecked((int)(value >> 32));
-            return result;
+            FILETIME result = new FILETIME(); result.dwLowDateTime = unchecked((int)(value & 0xFFFFFFFFL)); result.dwHighDateTime = unchecked((int)(value >> 32)); return result;
         }
 
         public static IList<HistorySample> Normalize(IList<HistorySample> rows)
         {
+            if (rows == null) throw new ArgumentNullException("rows");
             List<HistorySample> sorted = new List<HistorySample>(rows); sorted.Sort(delegate(HistorySample a, HistorySample b) { return a.Timestamp.CompareTo(b.Timestamp); });
             Dictionary<string, bool> seen = new Dictionary<string, bool>(StringComparer.Ordinal); List<HistorySample> result = new List<HistorySample>();
-            for (int i = 0; i < sorted.Count; i++) { HistorySample s = sorted[i]; string key = s.Timestamp.Ticks.ToString(CultureInfo.InvariantCulture) + "|" + Format(s.Value) + "|" + s.DataType + "|" + s.DeltaVStatus + "|" + s.ArchiveStatus + "|" + s.SequenceNo.ToString(CultureInfo.InvariantCulture) + "|" + s.IsHistoryHole + "|" + s.IsCRHole + "|" + s.IsManuallyDeleted + "|" + s.IsManuallyInserted; if (!seen.ContainsKey(key)) { seen.Add(key, true); result.Add(s); } }
+            for (int i = 0; i < sorted.Count; i++) { HistorySample s = sorted[i]; string key = SampleKey(s); if (!seen.ContainsKey(key)) { seen.Add(key, true); result.Add(s); } }
             return result;
         }
 
+        private static bool SameSample(HistorySample a, HistorySample b) { return String.Equals(SampleKey(a), SampleKey(b), StringComparison.Ordinal); }
+
+        private static string SampleKey(HistorySample s)
+        {
+            return s.Timestamp.Ticks.ToString(CultureInfo.InvariantCulture) + "|" + ValueField(s.Value) + "|" + Field(s.DataType) + "|" + Field(s.DeltaVStatus) + "|" + Field(s.ArchiveStatus) + "|" + s.SequenceNo.ToString(CultureInfo.InvariantCulture) + "|" + s.IsHistoryHole.ToString() + "|" + s.IsCRHole.ToString() + "|" + s.IsManuallyDeleted.ToString() + "|" + s.IsManuallyInserted.ToString();
+        }
+
+        private static string ValueField(object value) { return value == null || value == DBNull.Value ? "null" : Field(Format(value)); }
+        private static string Field(string value) { return value == null ? "-1:" : value.Length.ToString(CultureInfo.InvariantCulture) + ":" + value; }
         private static string Format(object value) { IFormattable f = value as IFormattable; return value == null ? "" : (f == null ? value.ToString() : f.ToString(null, CultureInfo.InvariantCulture)); }
+        private static string FormatDate(DateTime value) { return value.ToString("yyyy-MM-ddTHH:mm:ss.fffffff", CultureInfo.InvariantCulture); }
         private static void EnsureInitialized() { if (_initialized) return; lock (InitializeGate) { if (_initialized) return; DvAccess.Initialize(); _initialized = true; } }
         private static HistorianException Wrap(string message, Exception ex) { return ex as HistorianException ?? new HistorianException(message + " " + ex.Message, ex); }
         private void Log(string message) { if (_log != null) _log.Info(message); }

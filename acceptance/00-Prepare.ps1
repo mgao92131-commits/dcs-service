@@ -12,13 +12,14 @@ Server=$HistorianServer
 ConnectionTimeoutSeconds=30
 TestTag=$HistoryTag
 ReadChunkSamples=$HistorySplitMaxSamples
+StreamWindowMinutes=$StreamWindowMinutes
 
 [Events]
 Server=$EventServer
 Database=$EventDatabase
 Schema=$EventSchema
 Table=$EventTable
-CommandTimeoutSeconds=30
+CommandTimeoutSeconds=60
 RuntimeStateCacheSeconds=30
 
 [Api]
@@ -29,11 +30,10 @@ HistoryMaxConcurrent=2
 EventMaxConcurrent=4
 RequestQueueLimit=32
 
-[ApiLimits]
-MaxEventRows=$MaxEventRows
-MaxHistorySpanHours=$MaxHistorySpanHours
-MaxSamplesPerHistoryRequest=$MaxSamplesPerHistoryRequest
-RequestTimeoutSeconds=60
+[Timeout]
+ProviderSlotWaitSeconds=$ProviderSlotWaitSeconds
+SocketReadSeconds=$SocketReadSeconds
+SocketWriteSeconds=$SocketWriteSeconds
 
 [Time]
 SourceTimeZone=$SourceTimeZone

@@ -20,7 +20,9 @@ namespace DcsDataService.DeltaV.Historian
             if (String.IsNullOrEmpty(testTag)) throw new HistorianException("Historian.TestTag must be configured for probe.");
             result.Tag = _provider.ResolveTags(new List<string> { testTag })[0];
             if (result.Tag.Status != HistoryTagStatus.HistoryTagOK) throw new HistorianException("Test tag is " + result.Tag.Status + ": " + testTag);
-            result.Samples = _provider.ReadRaw(testTag, DateTime.Now.AddMinutes(-5), DateTime.Now, 1000).Count; return result;
+            int samples = 0;
+            _provider.ReadRawStream(testTag, DateTime.Now.AddMinutes(-5), DateTime.Now, 1000, TimeSpan.FromMinutes(5), delegate(IList<HistorySample> batch) { samples += batch.Count; });
+            result.Samples = samples; return result;
         }
     }
 }

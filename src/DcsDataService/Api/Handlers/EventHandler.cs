@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Text;
@@ -10,54 +11,89 @@ namespace DcsDataService.Api.Handlers
 {
     public sealed class EventHandler : IApiHandler
     {
-        private readonly HandlerContext _c; public EventHandler(HandlerContext c) { _c = c; }
+        private readonly HandlerContext _c;
+        public EventHandler(HandlerContext c) { _c = c; }
+
         public HttpResponse Handle(HttpRequest request)
         {
-            IDictionary<string, string> query = QueryStringParser.Parse(request.QueryString); int limit = QueryStringParser.OptionalInt(query, "limit", _c.Config.MaxEventRows);
-            if (limit < 1 || limit > _c.Config.MaxEventRows) throw new ArgumentException("limit must be between 1 and MaxEventRows.");
-            bool hasRange = Has(query, "from") || Has(query, "to"); bool hasCursor = Has(query, "afterTime") || Has(query, "afterFracSec") || Has(query, "afterOrd");
-            if (hasRange == hasCursor) throw new ArgumentException("Specify exactly one mode: from/to or afterTime/afterFracSec/afterOrd.");
-            EventPage page;
-            using (_c.EventGate.Enter(_c.Config.RequestTimeoutSeconds * 1000))
+            IDictionary<string, string> query = QueryStringParser.Parse(request.QueryString);
+            if (query.ContainsKey("limit")) throw new ArgumentException("limit is no longer supported; specify a complete time range instead.");
+
+            bool hasFrom = Has(query, "from"); bool hasTo = Has(query, "to");
+            bool hasCursor = Has(query, "afterTime") || Has(query, "afterFracSec") || Has(query, "afterOrd") || Has(query, "sourceGeneration");
+            if (hasFrom && hasCursor) throw new ArgumentException("Specify exactly one mode: from/to or afterTime/afterFracSec/afterOrd/sourceGeneration/to.");
+            if (!hasFrom && !hasCursor) throw new ArgumentException("Specify exactly one mode: from/to or afterTime/afterFracSec/afterOrd/sourceGeneration/to.");
+
+            DateTime sourceFrom; DateTime sourceTo; DateTime rawFrom; DateTime rawTo; EventCursor cursor = null; string requestedGeneration = null;
+            if (hasFrom)
             {
-                if (hasRange)
+                if (!hasTo) throw new ArgumentException("to is required for range mode.");
+                sourceFrom = QueryStringParser.RequiredDate(query, "from"); sourceTo = QueryStringParser.RequiredDate(query, "to");
+                if (sourceTo <= sourceFrom) throw new ArgumentException("to must be after from.");
+                rawFrom = _c.Time.SourceToRawUtc(sourceFrom); rawTo = _c.Time.SourceToRawUtc(sourceTo);
+            }
+            else
+            {
+                if (!hasTo) throw new ArgumentException("to is required for cursor mode.");
+                sourceTo = QueryStringParser.RequiredDate(query, "to");
+                int frac = QueryStringParser.RequiredInt(query, "afterFracSec"); if (frac < Int16.MinValue || frac > Int16.MaxValue) throw new ArgumentException("afterFracSec must be inside SmallInt range.");
+                int ord = QueryStringParser.RequiredInt(query, "afterOrd"); sourceFrom = QueryStringParser.RequiredDate(query, "afterTime"); requestedGeneration = QueryStringParser.Required(query, "sourceGeneration");
+                cursor = new EventCursor { DateTimeValue = _c.Time.SourceToRawUtc(sourceFrom), FracSec = Convert.ToInt16(frac), Ord = ord }; rawTo = _c.Time.SourceToRawUtc(sourceTo); rawFrom = cursor.DateTimeValue;
+            }
+
+            EventProvider.EventStream prepared = null; IDisposable gate = null; string generation; string fileName;
+            try
+            {
+                gate = _c.EventGate.Enter(_c.Config.ProviderSlotWaitSeconds * 1000);
+                if (hasFrom)
                 {
-                    DateTime from = _c.Time.SourceToRawUtc(QueryStringParser.RequiredDate(query, "from")); DateTime to = _c.Time.SourceToRawUtc(QueryStringParser.RequiredDate(query, "to"));
-                    page = _c.Events.ReadRangePage(from, to, null, limit, null);
+                    prepared = _c.Events.PrepareRangeStream(rawFrom, rawTo); generation = prepared.SourceGeneration; fileName = DownloadFileName.Events(sourceFrom, sourceTo);
                 }
                 else
                 {
-                    int frac = QueryStringParser.RequiredInt(query, "afterFracSec"); if (frac < Int16.MinValue || frac > Int16.MaxValue) throw new ArgumentException("afterFracSec must be inside SmallInt range.");
-                    int ord = QueryStringParser.RequiredInt(query, "afterOrd");
-                    EventCursor cursor = new EventCursor { DateTimeValue = _c.Time.SourceToRawUtc(QueryStringParser.RequiredDate(query, "afterTime")), FracSec = Convert.ToInt16(frac), Ord = ord };
-                    string generation = QueryStringParser.Required(query, "sourceGeneration"); page = _c.Events.ReadAfterPage(cursor, limit, generation);
+                    prepared = _c.Events.PrepareAfterStream(cursor, rawTo, requestedGeneration); generation = prepared.SourceGeneration; fileName = DownloadFileName.Events(sourceFrom, sourceTo);
                 }
+
+                _c.Log.Info("Event stream start from=" + FormatDate(sourceFrom) + " to=" + FormatDate(sourceTo) + " generation=" + generation);
+                EventProvider.EventStream streamForResponse = prepared;
+                HttpResponse response = new HttpResponse { StatusCode = 200, ContentType = "text/csv; charset=utf-8", IsChunked = true };
+                response.Headers["X-DCS-Source-TimeZone"] = _c.Config.SourceTimeZone;
+                response.Headers["X-DCS-Source-Generation"] = generation;
+                response.Headers["X-DCS-To"] = FormatDate(sourceTo);
+                response.Headers["Content-Disposition"] = "attachment; filename=\"" + fileName + "\"";
+                response.BodyResource = new DisposablePair(prepared, gate);
+                prepared = null; gate = null;
+                response.BodyWriter = delegate(Stream stream)
+                {
+                    Stopwatch clock = Stopwatch.StartNew(); long rows = 0;
+                    StreamWriter text = new StreamWriter(stream, new UTF8Encoding(false)); CsvWriter csv = new CsvWriter(text);
+                    csv.WriteRow("DateTime", "FracSec", "Ord", "EventType", "EventSubType", "Category", "Area", "Node", "Unit", "Module", "ModuleDescription", "Attribute", "State", "EventLevel", "Desc1", "Desc2", "IsArchived"); text.Flush();
+                    try
+                    {
+                        streamForResponse.Stream(delegate(EventRecord record)
+                        {
+                            csv.WriteRow(FormatDate(_c.Time.RawUtcToSource(record.DateTimeValue)), record.FracSec, record.Ord, record.EventType, record.EventSubType, record.Category, record.Area, record.Node, record.Unit, record.Module, record.ModuleDescription, record.Attribute, record.State, record.EventLevel, record.Desc1, record.Desc2, record.IsArchived);
+                            rows++; if (rows % 1000 == 0) text.Flush();
+                        });
+                        text.Flush(); clock.Stop();
+                        _c.Log.Info("Event stream complete durationMs=" + clock.ElapsedMilliseconds.ToString(CultureInfo.InvariantCulture) + " rows=" + rows.ToString(CultureInfo.InvariantCulture) + " generation=" + generation);
+                    }
+                    catch (Exception ex)
+                    {
+                        clock.Stop(); _c.Log.Error("Event stream aborted durationMs=" + clock.ElapsedMilliseconds.ToString(CultureInfo.InvariantCulture) + " rows=" + rows.ToString(CultureInfo.InvariantCulture) + " generation=" + generation, ex); throw;
+                    }
+                };
+                return response;
             }
-            _c.Log.Info("Event query rowCount=" + page.Records.Count.ToString(CultureInfo.InvariantCulture) + " generation=" + page.SourceGeneration);
-            return Csv(page);
-        }
-        private HttpResponse Csv(EventPage page)
-        {
-            HttpResponse response = new HttpResponse { StatusCode = 200, ContentType = "text/csv; charset=utf-8" };
-            response.Headers["X-DCS-Row-Count"] = page.Records.Count.ToString(CultureInfo.InvariantCulture); response.Headers["X-DCS-Source-TimeZone"] = _c.Config.SourceTimeZone; response.Headers["X-DCS-Source-Generation"] = page.SourceGeneration;
-            ApplyPagingHeaders(response, page, _c.Time);
-            IList<EventRecord> rows = page.Records;
-            response.BodyWriter = delegate(Stream stream)
+            catch
             {
-                StreamWriter text = new StreamWriter(stream, new UTF8Encoding(false)); CsvWriter csv = new CsvWriter(text);
-                csv.WriteRow("DateTime", "FracSec", "Ord", "EventType", "EventSubType", "Category", "Area", "Node", "Unit", "Module", "ModuleDescription", "Attribute", "State", "EventLevel", "Desc1", "Desc2", "IsArchived");
-                for (int i = 0; i < rows.Count; i++) { EventRecord e = rows[i]; csv.WriteRow(FormatDate(_c.Time.RawUtcToSource(e.DateTimeValue)), e.FracSec, e.Ord, e.EventType, e.EventSubType, e.Category, e.Area, e.Node, e.Unit, e.Module, e.ModuleDescription, e.Attribute, e.State, e.EventLevel, e.Desc1, e.Desc2, e.IsArchived); }
-                text.Flush();
-            };
-            return response;
+                if (prepared != null) prepared.Dispose();
+                if (gate != null) gate.Dispose();
+                throw;
+            }
         }
+
         private static bool Has(IDictionary<string, string> values, string name) { return values.ContainsKey(name); }
         private static string FormatDate(DateTime value) { return value.ToString("yyyy-MM-ddTHH:mm:ss.fff", CultureInfo.InvariantCulture); }
-        public static void ApplyPagingHeaders(HttpResponse response, EventPage page, SourceTimeConverter time)
-        {
-            if (response == null) throw new ArgumentNullException("response"); if (page == null) throw new ArgumentNullException("page"); if (time == null) throw new ArgumentNullException("time");
-            response.Headers["X-DCS-Has-More"] = page.HasMore ? "true" : "false"; EventCursor cursor = page.NextCursor; if (cursor == null) return;
-            response.Headers["X-DCS-Next-DateTime"] = FormatDate(time.RawUtcToSource(cursor.DateTimeValue)); response.Headers["X-DCS-Next-FracSec"] = cursor.FracSec.ToString(CultureInfo.InvariantCulture); response.Headers["X-DCS-Next-Ord"] = cursor.Ord.ToString(CultureInfo.InvariantCulture);
-        }
     }
 }

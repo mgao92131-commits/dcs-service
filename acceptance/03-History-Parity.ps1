@@ -39,7 +39,8 @@ $path = "/api/v1/history?tag=" + [Uri]::EscapeDataString($HistoryTag) + "&from="
 $response = Invoke-HttpCsv $path $newCsv
 Require-Http200 $response ($Mode + " history query")
 
-$sampleCount = [int]$response.Headers["X-DCS-Row-Count"]
+$newRows = @(Import-Csv -LiteralPath $newCsv)
+$sampleCount = $newRows.Count
 if ($Mode -eq "AutoSplit" -and $sampleCount -le $max) {
     throw "AUTOSPLIT NOT PROVEN: sampleCount=$sampleCount is not greater than per-read max=$max. Increase the interval or choose a denser tag."
 }
