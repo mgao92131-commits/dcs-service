@@ -1,0 +1,5 @@
+{
+  "base_url": "http://192.168.1.10:8088",
+  "timeout_connect": 30,
+  "timeout_read": 300
+}

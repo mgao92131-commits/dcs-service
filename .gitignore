@@ -13,5 +13,6 @@ hda/
 *.pdb
 *.exe
 evidence/
+.work/
 acceptance/current-run.txt
 acceptance/service.pid
