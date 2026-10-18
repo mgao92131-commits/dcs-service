@@ -68,6 +68,11 @@ class TestServer(object):
                 self.server.requests.append(parsed)
                 self.server.responder(self, parsed)
 
+            def do_POST(self):
+                parsed = urlsplit(self.path)
+                self.server.requests.append(parsed)
+                self.server.responder(self, parsed)
+
             def log_message(self, format_string, *args):
                 pass
 
@@ -99,6 +104,58 @@ def run_cli(arguments):
 
 
 class DcsDataSkillTests(unittest.TestCase):
+    def test_realtime_single_never_probes_historian(self):
+        def responder(handler, parsed):
+            self.assertEqual(parsed.path, "/api/v1/realtime")
+            self.assertEqual(parse_qs(parsed.query)["tag"], ["SY-218/AI1/PV.CV"])
+            send_body(handler, 200, json.dumps({"ok": True, "tag": "SY-218/AI1/PV.CV", "value": 512.6943359375}))
+        with TestServer(responder) as server:
+            code, result = run_cli(["--base-url", server.base_url, "realtime", "SY-218/AI1/PV.CV"])
+            self.assertEqual(code, 0)
+            self.assertEqual(result["value"], 512.6943359375)
+            self.assertEqual(len(server.server.requests), 1)
+
+    def test_realtime_batch_partial_preserves_errors_and_order(self):
+        tags = ["A/AI1/PV.CV", "B/AI1/PV.CV", "A/AI1/PV.CV"]
+        def responder(handler, parsed):
+            self.assertEqual(handler.command, "POST")
+            self.assertEqual(parsed.path, "/api/v1/realtime/batch")
+            body = json.loads(handler.rfile.read(int(handler.headers["Content-Length"])))
+            self.assertEqual(body, {"tags": tags})
+            send_body(handler, 200, json.dumps({"ok": False, "complete": True, "total": 3, "successCount": 2, "failureCount": 1, "items": [{"tag": tags[0], "ok": True, "value": "中文"}, {"tag": tags[1], "ok": False, "error": {"code": "parameter_not_found"}}, {"tag": tags[2], "ok": True, "value": 1}]}))
+        with TestServer(responder) as server:
+            code, result = run_cli(["--base-url", server.base_url, "realtime-batch"] + tags)
+            self.assertEqual(code, 1)
+            self.assertEqual([item["tag"] for item in result["items"]], tags)
+            self.assertEqual(result["items"][0]["value"], "中文")
+
+    def test_realtime_read_timeout_applies_before_response_headers(self):
+        import time
+        def responder(handler, parsed):
+            time.sleep(0.2)
+            try:
+                send_body(handler, 200, json.dumps({"ok": True, "tag": "A/AI1/PV.CV", "value": 1}))
+            except OSError:
+                pass
+        with TestServer(responder) as server:
+            code, result = run_cli(["--base-url", server.base_url, "--timeout-connect", "1", "--timeout-read", "0.05", "realtime", "A/AI1/PV.CV"])
+            self.assertEqual(code, 1)
+            self.assertEqual(result["error"], "dcs_unavailable")
+
+    def test_realtime_batch_rejects_missing_value(self):
+        def responder(handler, parsed):
+            handler.rfile.read(int(handler.headers["Content-Length"]))
+            send_body(handler, 200, json.dumps({"ok": True, "complete": True, "total": 1, "successCount": 1, "failureCount": 0, "items": [{"tag": "A/AI1/PV.CV", "ok": True}]}))
+        with TestServer(responder) as server:
+            code, result = run_cli(["--base-url", server.base_url, "realtime-batch", "A/AI1/PV.CV"])
+            self.assertEqual(code, 1)
+            self.assertEqual(result["error"], "invalid_response")
+
+    def test_realtime_rejects_module_only_input(self):
+        code, result = run_cli(["realtime", "SY-218"])
+        self.assertEqual(code, 1)
+        self.assertEqual(result["error"], "invalid_request")
+
     def test_time_normalization_and_last_range(self):
         parsed = DCS.parse_source_time("2026-09-04 08:00", "--from")
         self.assertEqual(DCS.format_source_time(parsed), "2026-09-04T08:00:00")
@@ -136,11 +193,118 @@ class DcsDataSkillTests(unittest.TestCase):
         self.assertEqual(result["data"][0]["value"], 81.23)
         self.assertFalse(result["data"][0]["is_history_hole"])
 
+    def test_module_history_defaults_to_actual_and_probes_candidates(self):
+        tag_requests = []
+
+        def responder(handler, parsed):
+            query = parse_qs(parsed.query)
+            if parsed.path == "/api/v1/tag":
+                requested = query["tag"][0]
+                tag_requests.append(requested)
+                if requested == "MOD1/PID1/PV.CV":
+                    send_body(handler, 200, '{"tag":"MOD1/PID1/PV.CV","status":"HistoryTagUnknown","dataType":""}')
+                elif requested == "MOD1/AI1/PV.CV":
+                    send_body(handler, 200, '{"tag":"MOD1/AI1/PV.CV","status":"HistoryTagOK","dataType":"Float"}')
+                else:
+                    send_body(handler, 200, '{"tag":"%s","status":"HistoryTagUnknown","dataType":""}' % requested)
+            else:
+                self.assertEqual(parsed.path, "/api/v1/history")
+                self.assertEqual(query["tag"], ["MOD1/AI1/PV.CV"])
+                send_chunked(handler, HISTORY_CSV)
+
+        with TestServer(responder) as server:
+            code, result = run_cli(["--base-url", server.base_url, "history", "MOD1", "--last", "1h", "--json"])
+        self.assertEqual(code, 0)
+        self.assertEqual(tag_requests, ["MOD1/PID1/PV.CV", "MOD1/AI1/PV.CV"])
+        self.assertEqual(result["module"], "MOD1")
+        self.assertEqual(result["role"], "actual")
+        self.assertEqual(result["tag"], "MOD1/AI1/PV.CV")
+        self.assertEqual(result["data_type"], "Float")
+
+    def test_module_history_uses_requested_setpoint_or_output_role(self):
+        for role, suffix in (("setpoint", "/PID1/SP.CV"), ("output", "/PID1/OUT.CV")):
+            tag_requests = []
+            expected_tag = "MOD2%s" % suffix
+
+            def responder(handler, parsed):
+                query = parse_qs(parsed.query)
+                if parsed.path == "/api/v1/tag":
+                    requested = query["tag"][0]
+                    tag_requests.append(requested)
+                    if requested == expected_tag:
+                        send_body(handler, 200, '{"tag":"%s","status":"HistoryTagOK","dataType":"Float"}' % requested)
+                    else:
+                        send_body(handler, 200, '{"tag":"%s","status":"HistoryTagUnknown","dataType":""}' % requested)
+                else:
+                    self.assertEqual(parsed.path, "/api/v1/history")
+                    self.assertEqual(query["tag"], [expected_tag])
+                    send_chunked(handler, HISTORY_CSV)
+
+            with TestServer(responder) as server:
+                code, result = run_cli(
+                    [
+                        "--base-url",
+                        server.base_url,
+                        "history",
+                        "MOD2",
+                        "--role",
+                        role,
+                        "--last",
+                        "1h",
+                        "--json",
+                    ]
+                )
+            self.assertEqual(code, 0)
+            self.assertEqual(tag_requests, [expected_tag])
+            self.assertEqual(result["module"], "MOD2")
+            self.assertEqual(result["role"], role)
+            self.assertEqual(result["tag"], expected_tag)
+
+    def test_module_history_reports_missing_or_service_ambiguous_candidates(self):
+        def missing_responder(handler, parsed):
+            if parsed.path == "/api/v1/tag":
+                query = parse_qs(parsed.query)
+                requested = query["tag"][0]
+                send_body(handler, 200, '{"tag":"%s","status":"HistoryTagUnknown","dataType":""}' % requested)
+            else:
+                self.fail("history must not be requested when no module candidate exists")
+
+        with TestServer(missing_responder) as server:
+            code, result = run_cli(["--base-url", server.base_url, "history", "MOD3", "--last", "1h"])
+        self.assertEqual(code, 1)
+        self.assertEqual(result["error"], "tag_not_found")
+        self.assertEqual(result["module"], "MOD3")
+        self.assertEqual(result["role"], "actual")
+        self.assertEqual(result["checked_tags"], [
+            "MOD3/PID1/PV.CV",
+            "MOD3/AI1/PV.CV",
+            "MOD3/DI1/PV_D.CV",
+            "MOD3/DC1/PV_D.CV",
+        ])
+
+        def ambiguous_responder(handler, parsed):
+            if parsed.path == "/api/v1/tag":
+                query = parse_qs(parsed.query)
+                requested = query["tag"][0]
+                if requested == "MOD4/PID1/PV.CV":
+                    send_body(handler, 200, '{"tag":"%s","status":"HistoryTagAmbiguous","dataType":""}' % requested)
+                else:
+                    send_body(handler, 200, '{"tag":"%s","status":"HistoryTagUnknown","dataType":""}' % requested)
+            else:
+                self.fail("history must not be requested for an ambiguous candidate")
+
+        with TestServer(ambiguous_responder) as server:
+            code, result = run_cli(["--base-url", server.base_url, "history", "MOD4", "--last", "1h"])
+        self.assertEqual(code, 1)
+        self.assertEqual(result["error"], "tag_ambiguous")
+        self.assertEqual(result["module"], "MOD4")
+        self.assertEqual(result["tag"], "MOD4/PID1/PV.CV")
+
     def test_event_file_is_validated_and_atomically_replaced(self):
         def responder(handler, parsed):
             send_chunked(handler, EVENT_CSV)
 
-        with tempfile.TemporaryDirectory(dir=str(REPO_ROOT)) as temp_dir:
+        with tempfile.TemporaryDirectory() as temp_dir:
             final_path = Path(temp_dir) / "events.csv"
             with TestServer(responder) as server:
                 code, result = run_cli(
@@ -196,7 +360,7 @@ class DcsDataSkillTests(unittest.TestCase):
         def incomplete_responder(handler, parsed):
             send_chunked(handler, HISTORY_CSV, complete=False)
 
-        with tempfile.TemporaryDirectory(dir=str(REPO_ROOT)) as temp_dir:
+        with tempfile.TemporaryDirectory() as temp_dir:
             final_path = Path(temp_dir) / "history.csv"
             final_path.write_text("old result", encoding="utf-8")
             with TestServer(incomplete_responder) as server:
@@ -205,7 +369,7 @@ class DcsDataSkillTests(unittest.TestCase):
                         "--base-url",
                         server.base_url,
                         "history",
-                        "T",
+                        "T/PID1/PV.CV",
                         "--from",
                         "2026-09-04 08:00",
                         "--to",

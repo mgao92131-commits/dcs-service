@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.IO;
 using DcsDataService.Api;
@@ -12,9 +12,23 @@ namespace DcsDataService
 {
     public static class Program
     {
-        public const string Version = "1.1.0";
+        public const string Version = "1.3.0";
         private static ApiServer _server;
+        private static DcsDataService.DeltaV.Realtime.RealtimeProvider _realtime;
         public static int Main(string[] args)
+        {
+            // Resolve vendor managed assemblies from the installed DeltaV directory only.
+            AppDomain.CurrentDomain.AssemblyResolve += ResolveDeltaVAssembly;
+            return Run(args);
+        }
+        private static System.Reflection.Assembly ResolveDeltaVAssembly(object sender, ResolveEventArgs args)
+        {
+            string name = new System.Reflection.AssemblyName(args.Name).Name;
+            if (!name.StartsWith("DeltaV.Historian.", StringComparison.Ordinal)) return null;
+            return System.Reflection.Assembly.LoadFrom(Path.Combine(DcsRealtime.DeltaVInstallation.BinDirectory, name + ".dll"));
+        }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static int Run(string[] args)
         {
             if (args.Length == 1 && args[0] == "--version") { Console.WriteLine("DcsDataService " + Version + " (.NET Framework 3.5 x86)"); return 0; }
             string command = args.Length == 0 ? "" : args[0].ToLowerInvariant(); string configPath = FindOption(args, "--config") ?? "config.ini";
@@ -25,11 +39,13 @@ namespace DcsDataService
                 SourceTimeConverter time = new SourceTimeConverter(config.SourceTimeZone);
                 HistorianProvider historian = new HistorianProvider(config.HistorianServer, config.HistorianConnectionTimeoutSeconds, log, time); EventProvider events = new EventProvider(config, log);
                 if (command == "probe") return Probe(config, historian, events, log);
-                HandlerContext context = new HandlerContext { Config = config, Historian = historian, Events = events, Log = log, Time = time, HistoryGate = new ConcurrencyGate(config.HistoryMaxConcurrent), EventGate = new ConcurrencyGate(config.EventMaxConcurrent) }; _server = new ApiServer(config, new Router(context), log);
-                Console.CancelKeyPress += delegate(object sender, ConsoleCancelEventArgs e) { e.Cancel = true; if (_server != null) _server.Stop(); };
+                _realtime = new DcsDataService.DeltaV.Realtime.RealtimeProvider(config, log);
+                HandlerContext context = new HandlerContext { Realtime = _realtime, Config = config, Historian = historian, Events = events, Log = log, Time = time, HistoryGate = new ConcurrencyGate(config.HistoryMaxConcurrent), EventGate = new ConcurrencyGate(config.EventMaxConcurrent) }; _server = new ApiServer(config, new Router(context), log);
+                Console.CancelKeyPress += delegate(object sender, ConsoleCancelEventArgs e) { e.Cancel = true; if (_server != null) _server.Stop(); if (_realtime != null) _realtime.Dispose(); };
                 Console.WriteLine("DcsDataService " + Version + " listening on http://127.0.0.1:" + config.ApiPort.ToString(CultureInfo.InvariantCulture)); _server.Run(); return 0;
             }
             catch (Exception ex) { Console.Error.WriteLine("FATAL: " + ex.Message); return 1; }
+            finally { if (_realtime != null) _realtime.Dispose(); }
         }
         private static int Probe(ServiceConfig config, HistorianProvider historian, EventProvider events, ServiceLog log)
         {

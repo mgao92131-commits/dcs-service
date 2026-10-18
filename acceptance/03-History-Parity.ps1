@@ -1,4 +1,4 @@
-param([ValidateSet("Normal", "AutoSplit")][string]$Mode = "Normal")
+﻿param([ValidateSet("Normal", "AutoSplit")][string]$Mode = "Normal")
 . (Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) "Common.ps1")
 Assert-Configured
 Assert-ServiceRunning
@@ -46,7 +46,7 @@ if ($Mode -eq "AutoSplit" -and $sampleCount -le $max) {
 }
 
 $parityLog = Join-Path $runDir ($artifactPrefix + "-parity.txt")
-$verifier = Join-Path $ServiceRoot "bin\ParityVerifier.exe"
+$verifier = Join-Path $ServiceRoot "test-tools\ParityVerifier.exe"
 & $verifier history $csv[0].FullName $newCsv $SourceTimeZone 2>&1 | Tee-Object -FilePath $parityLog
 $parityExit = $LASTEXITCODE
 Add-Content -Path $parityLog -Value ("ExitCode=" + $parityExit) -Encoding Unicode

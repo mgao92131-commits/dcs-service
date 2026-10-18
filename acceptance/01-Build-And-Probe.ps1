@@ -1,11 +1,11 @@
-. (Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) "Common.ps1")
+﻿. (Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) "Common.ps1")
 Assert-Configured
 $runDir = Get-RunDirectory
+$DeltaVDllDir = "C:\DeltaV\bin"
 
 if (-not (Test-Path -LiteralPath (Join-Path $DeltaVDllDir "DeltaV.Historian.DvCHDataAccess.dll"))) {
     throw "DvCHDataAccess DLL not found in DeltaVDllDir: $DeltaVDllDir"
 }
-$env:DELTAV_DLL_DIR = $DeltaVDllDir
 $env:LEGACY_EVENT_DIR = $LegacyEventSourceDir
 
 $legacyHistory = Join-Path $AcceptanceDir "legacy-history\HistoryReader.exe"

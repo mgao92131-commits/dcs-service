@@ -12,11 +12,11 @@ if not exist "%LEGACY_EVENT_DIR%\DeltaV\DeltaVReader.cs" (
   echo         Set LEGACY_EVENT_DIR or edit acceptance-settings.ps1.
   exit /b 2
 )
-if not exist "bin" mkdir "bin"
+if not exist "test-tools" mkdir "test-tools"
 echo Building read-only EventParityExport from legacy DeltaVReader...
 "%CSC_PATH%" /nologo /target:exe /platform:x86 /optimize+ ^
   /reference:System.dll /reference:System.Data.dll /reference:System.Web.Extensions.dll ^
-  /out:"bin\EventParityExport.exe" ^
+  /out:"test-tools\EventParityExport.exe" ^
   acceptance\EventParityExport.cs ^
   "%LEGACY_EVENT_DIR%\Configuration\AgentConfig.cs" ^
   "%LEGACY_EVENT_DIR%\Models\EventRecord.cs" ^
@@ -24,6 +24,6 @@ echo Building read-only EventParityExport from legacy DeltaVReader...
   "%LEGACY_EVENT_DIR%\DeltaV\SourceInfo.cs" ^
   "%LEGACY_EVENT_DIR%\DeltaV\DeltaVReader.cs"
 if errorlevel 1 exit /b 1
-echo [OK] bin\EventParityExport.exe
+echo [OK] test-tools\EventParityExport.exe
 exit /b 0
 

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using DcsDataService.Api.Handlers;
 
@@ -10,6 +10,7 @@ namespace DcsDataService.Api
         private readonly Dictionary<string, Route> _routes = new Dictionary<string, Route>(StringComparer.Ordinal);
         public Router(HandlerContext c)
         {
+            Add("GET", "/api/v1/realtime", new RealtimeHandler(c, false)); Add("POST", "/api/v1/realtime/batch", new RealtimeHandler(c, true));
             Add("GET", "/health", new HealthHandler()); Add("GET", "/api/v1/info", new InfoHandler(c)); Add("GET", "/api/v1/tag", new TagHandler(c)); Add("GET", "/api/v1/history", new HistoryHandler(c)); Add("GET", "/api/v1/events", new DcsDataService.Api.Handlers.EventHandler(c));
         }
         private void Add(string method, string path, IApiHandler h) { _routes.Add(path, new Route { Method = method, Handler = h }); }

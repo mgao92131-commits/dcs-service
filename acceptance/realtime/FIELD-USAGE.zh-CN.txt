@@ -1,0 +1,26 @@
+﻿DCS 单 EXE 服务现场验证（1.3.0）
+
+正式程序只有 bin\DcsDataService.exe，实时、历史、事件均由它提供。
+DLL 固定来自 DCS 本机 C:\DeltaV\bin，不需要填写目录。
+旧配置没有 Realtime 节时默认启用。
+
+在 DCS 电脑打开本目录，先双击 RUN-REALTIME-API-TEST.cmd。
+完整参数路径提示直接回车，默认 SY-218/AI1/PV.CV。
+参考值、未入历史点、其他类型参数可以先回车跳过，跳过项不算验证通过。
+REALTIME API FIELD TEST PASSED 和 Exit code: 0 表示本次通过。
+随后运行 RUN-STABILITY-TEST.cmd 验证连续、并发读取以及内存和句柄趋势。
+
+RUN-HISTORY-EVENT-CHECK.cmd 验证历史和事件功能。先将实际服务 config.ini
+复制到本目录并命名 site-config.ini，以保留现场数据源；不会修改原文件。
+RUN-OFFLINE-CHECKS.cmd 使用模拟运行库，不读取 DCS 参数。
+RUN-DISABLED-TEST.cmd 检查显式关闭功能时的响应。
+STOP-TEST-SERVICE.cmd 按 PID、启动时间和路径停止本目录记录的测试实例。
+BUILD-ALL.cmd 从源码构建，依赖也固定来自 C:\DeltaV\bin。
+
+测试自动启动单独端口的临时服务，结束后关闭该实例，不更新正在运行的正式服务。
+使用能正常运行 WatchIt 的 DCS 用户执行。结果在 TestResults\日期_时间，
+summary.json 是总结果，03-single.json 和 04-mixed-batch.json 是读取结果。
+稳定性测试另存 stress-metrics.json。失败时保留整个结果文件夹。
+
+test-tools 仅用于测试，正式部署只复制 bin\DcsDataService.exe，继续使用原有 config.ini。
+旧版本通过记录不能代替本次原生对象释放逻辑的现场验收。

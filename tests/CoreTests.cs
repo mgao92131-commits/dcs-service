@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -26,7 +26,7 @@ internal static class CoreTests
             ChunkedWriteStreamFramesData(); ChunkedResponseCompletesOnlyOnSuccess();
             SourceTimeUsesBeijing(); HistoryNormalizationSortsAndDeduplicates();
             CsvIsStandardsCompliant(); QueryStringIsParsed(); RemovedLimitIsRejected();
-            ConfigurationUsesStreamingDefaults(); DownloadNamesAreSafe();
+            ConfigurationUsesStreamingDefaults(); FixedNativeDirectory(); DownloadNamesAreSafe();
             ServerIsLoopbackOnly(); ConcurrencyGateLimitsEntry();
             Console.WriteLine("CORE TESTS PASSED (" + _count + ")"); return 0;
         }
@@ -140,6 +140,20 @@ internal static class CoreTests
             ServiceConfig config = IniConfigLoader.Load(path); Check(config.HistorianStreamWindowMinutes == 60 && config.EventStreamWindowMinutes == 30 && config.ProviderSlotWaitSeconds == 60 && config.SocketWriteSeconds == 120, "Independent streaming timeout/window settings must be loaded."); Check(config.HistoryMaxConcurrent == 2 && config.EventMaxConcurrent == 4 && config.RequestQueueLimit == 32, "Concurrency defaults must be 2/4/32.");
         }
         finally { if (File.Exists(path)) File.Delete(path); }
+    }
+
+    private static void FixedNativeDirectory()
+    {
+        Check(DcsRealtime.DeltaVInstallation.BinDirectory == @"C:\DeltaV\bin", "Native runtime must use the fixed local DeltaV directory.");
+        string temporary = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(temporary, "[Realtime]\r\nDeltaVBinDirectory=Z:\\wrong\r\nWorkerPath=obsolete.exe\r\n");
+            Check(IniConfigLoader.Load(temporary).RealtimeEnabled, "Existing configs need no Realtime section or path settings to enable reads.");
+        }
+        finally { File.Delete(temporary); }
+
+        Check(typeof(ServiceConfig).GetField("RealtimeBinDirectory") == null && typeof(ServiceConfig).GetField("RealtimeWorkerPath") == null, "Configuration must not override the native directory or select a worker.");
     }
 
     private static void DownloadNamesAreSafe()

@@ -16,3 +16,6 @@ evidence/
 .work/
 acceptance/current-run.txt
 acceptance/service.pid
+
+__pycache__/
+*.py[cod]

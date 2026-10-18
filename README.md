@@ -4,7 +4,7 @@
 
 ## Build and run
 
-On a DeltaV machine, or with `DELTAV_DLL_DIR` pointing at compatible assemblies:
+On a DeltaV machine with the required assemblies installed in `C:\DeltaV\bin` (fixed build dependency directory):
 
 ```bat
 build-net35-x86.bat
@@ -18,6 +18,8 @@ All request times and returned timestamps use the configured source-local timezo
 
 - `GET /health` — liveness JSON.
 - `GET /api/v1/info` — service metadata JSON.
+- `GET /api/v1/realtime?tag=...` — native single-point realtime JSON (requires Realtime.Enabled).
+- `POST /api/v1/realtime/batch` — native batch JSON, body `{"tags":["MODULE/AI1/PV.CV"]}`.
 - `GET /api/v1/tag?tag=...` — Historian tag diagnostic JSON.
 - `GET /api/v1/history?tag=...&from=...&to=...` — complete History CSV for `[from,to)`.
 - `GET /api/v1/events?from=...&to=...` — complete Event CSV for `[from,to)`.
@@ -102,3 +104,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tests\localhost-api-test.ps1
 ```
 
 The acceptance workflow under `acceptance` compares complete CSV ranges with the verified legacy readers on a real DCS machine, including a History AutoSplit range and an Event checkpoint range.
+
+## Native realtime reads
+
+The build produces a single `bin/DcsDataService.exe` (.NET 3.5 x86). Realtime, Historian and Event Journal run in this process. Realtime is enabled by default and initializes once on a serialized service thread. DeltaV DLLs come from the local `C:\DeltaV\bin` installation. No DLL-directory or worker-path setting is needed. Vendor DLLs are no longer copied into the production directory.
+
+Single/batch APIs retain typed values, input order, duplicates and per-point errors. Sampling is sequential; unavailable source timestamps/quality remain null. Native synchronous calls cannot be safely aborted: queued realtime requests may receive `service_busy` until the active read finishes. See [the realtime API documentation](docs/REALTIME-API.zh-CN.md).
+
+Deploy `bin/DcsDataService.exe` with the existing service `config.ini`. Tests stay under `test-tools/` and are not part of production deployment. `tests\run-realtime-tests.bat` checks an in-process fake runtime without reading the DCS. Field CMDs are under `acceptance/realtime`.

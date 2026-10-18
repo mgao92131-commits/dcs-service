@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.Text;
 using System.IO;
@@ -19,7 +19,7 @@ namespace DcsDataService.Api
         {
             if (stream == null) throw new ArgumentNullException("stream");
             byte[] body = BodyWriter == null ? Encoding.UTF8.GetBytes(Body ?? "") : null;
-            string reason = StatusCode == 200 ? "OK" : StatusCode == 400 ? "Bad Request" : StatusCode == 404 ? "Not Found" : StatusCode == 405 ? "Method Not Allowed" : StatusCode == 409 ? "Conflict" : StatusCode == 413 ? "Payload Too Large" : StatusCode == 429 ? "Too Many Requests" : StatusCode == 503 ? "Service Unavailable" : "Internal Server Error";
+            string reason = StatusCode == 200 ? "OK" : StatusCode == 400 ? "Bad Request" : StatusCode == 404 ? "Not Found" : StatusCode == 405 ? "Method Not Allowed" : StatusCode == 409 ? "Conflict" : StatusCode == 413 ? "Payload Too Large" : StatusCode == 429 ? "Too Many Requests" : StatusCode == 504 ? "Gateway Timeout" : StatusCode == 503 ? "Service Unavailable" : "Internal Server Error";
             try
             {
                 StringBuilder head = new StringBuilder(); head.Append("HTTP/1.1 ").Append(StatusCode.ToString(CultureInfo.InvariantCulture)).Append(' ').Append(reason).Append("\r\nContent-Type: ").Append(ContentType).Append("\r\n");

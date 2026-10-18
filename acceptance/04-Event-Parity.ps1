@@ -1,8 +1,8 @@
-. (Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) "Common.ps1")
+﻿. (Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) "Common.ps1")
 Assert-Configured
 Assert-ServiceRunning
 $runDir = Get-RunDirectory
-$exporter = Join-Path $ServiceRoot "bin\EventParityExport.exe"
+$exporter = Join-Path $ServiceRoot "test-tools\EventParityExport.exe"
 if (-not (Test-Path -LiteralPath $exporter)) { throw "Event reference exporter is missing. Run RUN-01-BUILD-PROBE.bat first." }
 $eventStartValue = [DateTime]::ParseExact($EventStart, "yyyy-MM-dd HH:mm:ss", [Globalization.CultureInfo]::InvariantCulture)
 $eventEndValue = [DateTime]::ParseExact($EventEnd, "yyyy-MM-dd HH:mm:ss", [Globalization.CultureInfo]::InvariantCulture)
@@ -27,7 +27,7 @@ $rangeResponse = Invoke-HttpCsv $rangePath $rangeNew
 Require-Http200 $rangeResponse "event range"
 
 $rangeParity = Join-Path $runDir ($artifactPrefix + "-range-parity.txt")
-& (Join-Path $ServiceRoot "bin\ParityVerifier.exe") event $rangeOld $rangeNew $SourceTimeZone 2>&1 | Tee-Object -FilePath $rangeParity
+& (Join-Path $ServiceRoot "test-tools\ParityVerifier.exe") event $rangeOld $rangeNew $SourceTimeZone 2>&1 | Tee-Object -FilePath $rangeParity
 if ($LASTEXITCODE -ne 0) { throw "Event range parity failed." }
 
 $events = @(Import-Csv -LiteralPath $rangeNew)
@@ -52,7 +52,7 @@ $afterResponse = Invoke-HttpCsv $afterPath $afterNew
 Require-Http200 $afterResponse "event after"
 
 $afterParity = Join-Path $runDir ($artifactPrefix + "-after-parity.txt")
-& (Join-Path $ServiceRoot "bin\ParityVerifier.exe") event $afterOld $afterNew $SourceTimeZone 2>&1 | Tee-Object -FilePath $afterParity
+& (Join-Path $ServiceRoot "test-tools\ParityVerifier.exe") event $afterOld $afterNew $SourceTimeZone 2>&1 | Tee-Object -FilePath $afterParity
 if ($LASTEXITCODE -ne 0) { throw "Event after parity failed." }
 
 Write-Host "EVENT RANGE AND AFTER PARITY PASSED"

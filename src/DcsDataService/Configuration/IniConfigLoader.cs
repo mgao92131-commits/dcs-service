@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -39,6 +39,11 @@ namespace DcsDataService.Configuration
             c.SocketReadSeconds = Number(values, "Timeout.SocketReadSeconds", c.SocketReadSeconds);
             c.SocketWriteSeconds = Number(values, "Timeout.SocketWriteSeconds", c.SocketWriteSeconds);
             c.SourceTimeZone = Text(values, "Time.SourceTimeZone", c.SourceTimeZone); c.LogDirectory = Text(values, "Files.Logs", c.LogDirectory);
+            string realtimeEnabled = Text(values, "Realtime.Enabled", "true");
+            bool enabled; if (!Boolean.TryParse(realtimeEnabled, out enabled)) throw new ConfigurationException("Realtime.Enabled must be true or false.");
+            c.RealtimeEnabled = enabled;
+            c.RealtimeMaxBatchTags = Number(values, "Realtime.MaxBatchTags", c.RealtimeMaxBatchTags);
+            c.RealtimeSlotWaitSeconds = Number(values, "Realtime.SlotWaitSeconds", c.RealtimeSlotWaitSeconds);
             c.Validate(); return c;
         }
 

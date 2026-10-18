@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Diagnostics;
@@ -42,6 +42,7 @@ namespace DcsDataService.Api
             catch (RequestTooLargeException ex) { ReplyOrAbort(response, stream, 413, Error(413, "request_too_large", ex.Message), "HTTP request too large", ex, ref status); }
             catch (RouteException ex) { ReplyOrAbort(response, stream, ex.Status, Error(ex.Status, ex.Code, ex.Message), "HTTP route failure", ex, ref status); }
             catch (ArgumentException ex) { ReplyOrAbort(response, stream, 400, Error(400, "invalid_request", ex.Message), "HTTP request validation failure", ex, ref status); }
+            catch (DcsDataService.DeltaV.Realtime.RealtimeException ex) { ReplyOrAbort(response, stream, ex.HttpStatus, new HttpResponse { StatusCode = ex.HttpStatus, Body = JsonUtil.Serialize(new { ok = false, error = ex.Error }) }, "Realtime failure", ex, ref status); }
             catch (FileNotFoundException ex) { ReplyOrAbort(response, stream, 503, Error(503, "historian_unavailable", "Historian DLL is unavailable."), "Historian DLL failure", ex, ref status); }
             catch (IOException ex) { ReplyOrAbort(response, stream, 400, Error(400, "request_timeout", "Request was incomplete or timed out."), "HTTP read/write failure or timeout", ex, ref status); }
             catch (HistorianException ex) { ReplyOrAbort(response, stream, 503, Error(503, "historian_unavailable", "Historian is unavailable."), "Historian failure", ex, ref status); }

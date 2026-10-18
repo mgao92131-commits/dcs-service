@@ -62,6 +62,24 @@ INTEGER_RE = re.compile(r"^[+-]?\d+$")
 TAG_UNKNOWN_RE = re.compile(r"historytagunknown", re.IGNORECASE)
 TAG_AMBIGUOUS_RE = re.compile(r"historytagambiguous", re.IGNORECASE)
 
+# A module name is resolved by probing these small, role-specific candidate
+# lists.  The service remains the source of truth; module-prefix rules are not
+# required for the normal path and can only be used later as an optimization.
+ROLE_CANDIDATES = {
+    "actual": (
+        "/PID1/PV.CV",
+        "/AI1/PV.CV",
+        "/DI1/PV_D.CV",
+        "/DC1/PV_D.CV",
+    ),
+    "setpoint": (
+        "/PID1/SP.CV",
+    ),
+    "output": (
+        "/PID1/OUT.CV",
+    ),
+}
+
 
 class DcsCliError(Exception):
     """An expected, user-facing CLI failure with a stable error code."""
@@ -229,6 +247,8 @@ def _translate_http_error(status, server_code, server_message):
         return "tag_not_found", "The requested TAG was not found."
     if TAG_AMBIGUOUS_RE.search(message):
         return "tag_ambiguous", "The requested TAG is ambiguous."
+    if server_code and (server_code.startswith("realtime_") or server_code == "parameter_not_found"):
+        return server_code, message
     if status == 429 or server_code == "service_busy":
         return "dcs_busy", "DCS data service is busy. Retry later."
     if status == 503 or server_code in ("historian_unavailable", "event_unavailable", "event_overflow", "event_journal_full", "event_source_changed"):
@@ -257,16 +277,21 @@ class DcsClient(object):
         return target
 
     @contextmanager
-    def _open(self, path, params=None, accept="application/json"):
+    def _open(self, path, params=None, accept="application/json", method="GET", payload=None):
         connection_type = http.client.HTTPSConnection if self._base.scheme == "https" else http.client.HTTPConnection
         connection = None
         response = None
         try:
             connection = connection_type(self._base.hostname, self._base.port, timeout=self.config.timeout_connect)
-            connection.request("GET", self._target(path, params), headers={"Accept": accept, "Connection": "close"})
-            response = connection.getresponse()
+            headers = {"Accept": accept, "Connection": "close"}
+            body = None
+            if payload is not None:
+                body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+                headers["Content-Type"] = "application/json; charset=utf-8"
+            connection.request(method, self._target(path, params), body=body, headers=headers)
             if connection.sock is not None:
                 connection.sock.settimeout(self.config.timeout_read)
+            response = connection.getresponse()
         except (OSError, socket.timeout, http.client.HTTPException) as exc:
             if connection is not None:
                 connection.close()
@@ -310,6 +335,41 @@ class DcsClient(object):
             if response.status != 200:
                 raise self._read_error(response)
             return self._read_json_response(response)
+
+    def post_json(self, path, payload):
+        with self._open(path, method="POST", payload=payload) as response:
+            if response.status != 200:
+                raise self._read_error(response)
+            return self._read_json_response(response)
+
+    def realtime(self, tag):
+        _validate_realtime_tags([tag])
+        data = self.get_json("/api/v1/realtime", {"tag": tag})
+        if data.get("ok") is not True or data.get("tag") != tag or "value" not in data:
+            raise DcsCliError("invalid_response", "Realtime response did not contain the requested parameter value.")
+        result = dict(data)
+        result["type"] = "realtime"
+        return result
+
+    def realtime_batch(self, tags):
+        _validate_realtime_tags(tags)
+        data = self.post_json("/api/v1/realtime/batch", {"tags": tags})
+        items = data.get("items")
+        if data.get("complete") is not True or not isinstance(items, list) or len(items) != len(tags):
+            raise DcsCliError("invalid_response", "Realtime batch response was incomplete.")
+        if any(not isinstance(item, dict) or item.get("tag") != tag or not isinstance(item.get("ok"), bool) for item, tag in zip(items, tags)):
+            raise DcsCliError("invalid_response", "Realtime batch results did not match the request order.")
+        for item in items:
+            if item["ok"] and ("value" not in item or item["value"] is None):
+                raise DcsCliError("invalid_response", "A successful realtime item has no value.")
+            if not item["ok"] and (not isinstance(item.get("error"), dict) or not item["error"].get("code")):
+                raise DcsCliError("invalid_response", "A failed realtime item has no error code.")
+        successes = sum(item["ok"] for item in items)
+        if data.get("total") != len(tags) or data.get("successCount") != successes or data.get("failureCount") != len(tags) - successes or data.get("ok") is not (successes == len(tags)):
+            raise DcsCliError("invalid_response", "Realtime batch counts were inconsistent.")
+        result = dict(data)
+        result["type"] = "realtime_batch"
+        return result
 
     def health(self):
         data = self.get_json("/health")
@@ -542,7 +602,7 @@ def _json_dump(value):
 
 def _error_payload(error):
     payload = {"ok": False, "error": error.code, "message": error.message}
-    for key in ("tag",):
+    for key in ("tag", "module", "role", "checked_tags", "matches", "ambiguous_tags"):
         if key in error.details:
             payload[key] = error.details[key]
     return payload
@@ -557,33 +617,109 @@ def _history_error(error, tag):
     return error
 
 
+def _resolve_module_tag(client, module, role):
+    if not isinstance(module, str) or not module.strip():
+        raise DcsCliError("invalid_request", "A module name is required.")
+    if role not in ROLE_CANDIDATES:
+        raise DcsCliError("invalid_request", "role must be actual, setpoint, or output.")
+
+    module = module.strip()
+    if "/" in module:
+        raise DcsCliError("invalid_request", "A module name must not contain '/'.")
+    checked_tags = [module + suffix for suffix in ROLE_CANDIDATES[role]]
+    for candidate in checked_tags:
+        try:
+            tag_result = client.tag(candidate)
+        except DcsCliError as error:
+            if error.code == "tag_not_found":
+                continue
+            if error.code == "tag_ambiguous":
+                raise DcsCliError(
+                    "tag_ambiguous",
+                    "The candidate TAG is ambiguous.",
+                    {"module": module, "role": role, "tag": candidate, "checked_tags": checked_tags},
+                )
+            raise
+        # The first valid candidate is enough.  This keeps module lookup
+        # cheap and makes the candidate order the only intentional priority.
+        return {
+            "tag": tag_result.get("tag"),
+            "module": module,
+            "role": role,
+            "data_type": tag_result.get("data_type"),
+        }
+
+    raise DcsCliError(
+        "tag_not_found",
+        "No Historian TAG was found for the module and role.",
+        {"module": module, "role": role, "checked_tags": checked_tags},
+    )
+
+
+def _resolve_history_target(client, target, role):
+    if not isinstance(target, str) or not target.strip():
+        raise DcsCliError("invalid_request", "A TAG or module name is required.")
+    target = target.strip()
+    # Keep the existing exact-TAG behavior.  A slash distinguishes a full
+    # Historian TAG from the module-only form used by the Agent.
+    if "/" in target:
+        return {"tag": target}
+    return _resolve_module_tag(client, target, role)
+
+
+def _validate_realtime_tags(tags):
+    if not tags or len(tags) > 64:
+        raise DcsCliError("invalid_request", "Supply 1 to 64 full native parameter paths; the server may impose a lower configured batch limit.")
+    for tag in tags:
+        if not isinstance(tag, str) or len(tag) > 512 or tag != tag.strip() or any(ord(c) < 32 or ord(c) == 127 for c in tag):
+            raise DcsCliError("invalid_request", "Invalid native parameter path.")
+        if tag.rfind("/") < 1 or tag.rfind(".") <= tag.rfind("/") + 1 or tag.endswith(".") or "//" in tag:
+            raise DcsCliError("invalid_request", "Use a full native path such as MODULE/AI1/PV.CV.")
+
+
 def _run_history(client, args):
     start, end = resolve_range(args.from_time, args.to_time, args.last)
     from_text = format_source_time(start)
     to_text = format_source_time(end)
-    params = {"tag": args.tag, "from": from_text, "to": to_text}
+    resolution = _resolve_history_target(client, args.tag, args.role)
+    history_tag = resolution["tag"]
+    params = {"tag": history_tag, "from": from_text, "to": to_text}
     if args.json:
         try:
             raw = client.csv_bytes("/api/v1/history", params)
             rows = csv_json_rows(raw, HISTORY_HEADERS, history_json_row, args.max_rows)
         except DcsCliError as error:
-            raise _history_error(error, args.tag)
-        return {
+            raise _history_error(error, history_tag)
+        result = {
             "ok": True,
             "type": "history",
-            "tag": args.tag,
+            "tag": history_tag,
             "from": from_text,
             "to": to_text,
             "row_count": len(rows),
             "data": rows,
         }
+        if resolution.get("module") is not None:
+            result.update({
+                "module": resolution["module"],
+                "role": resolution["role"],
+                "data_type": resolution.get("data_type"),
+            })
+        return result
 
-    output = Path(args.output) if args.output else Path(".work") / "dcs" / default_history_filename(args.tag, start, end)
+    output = Path(args.output) if args.output else Path(".work") / "dcs" / default_history_filename(history_tag, start, end)
     try:
         count = client.download_csv("/api/v1/history", params, output, HISTORY_HEADERS)
     except DcsCliError as error:
-        raise _history_error(error, args.tag)
-    return {"ok": True, "type": "history", "tag": args.tag, "from": from_text, "to": to_text, "row_count": count, "file": os.fspath(output)}
+        raise _history_error(error, history_tag)
+    result = {"ok": True, "type": "history", "tag": history_tag, "from": from_text, "to": to_text, "row_count": count, "file": os.fspath(output)}
+    if resolution.get("module") is not None:
+        result.update({
+            "module": resolution["module"],
+            "role": resolution["role"],
+            "data_type": resolution.get("data_type"),
+        })
+    return result
 
 
 def _run_events(client, args):
@@ -624,9 +760,20 @@ def build_parser():
     tag = commands.add_parser("tag", help="diagnose one Historian tag")
     tag.add_argument("tag")
 
-    history = commands.add_parser("history", help="read complete History CSV")
-    history.add_argument("tag")
+    history = commands.add_parser("history", help="read complete History CSV for a TAG or module")
+    history.add_argument("tag", help="full Historian TAG or module name")
+    history.add_argument(
+        "--role",
+        choices=tuple(ROLE_CANDIDATES),
+        default="actual",
+        help="module value to read (default: %(default)s); ignored for a full TAG",
+    )
     _add_range_options(history)
+
+    realtime = commands.add_parser("realtime", help="read one native realtime parameter")
+    realtime.add_argument("tag", help="complete native parameter path; no Historian resolution")
+    batch = commands.add_parser("realtime-batch", help="read native realtime parameters in one batch")
+    batch.add_argument("tags", nargs="+", help="complete native parameter paths")
 
     events = commands.add_parser("events", help="read complete Event CSV")
     _add_range_options(events)
@@ -653,12 +800,16 @@ def main(argv=None):
             result = client.info()
         elif args.command == "tag":
             result = client.tag(args.tag)
+        elif args.command == "realtime":
+            result = client.realtime(args.tag)
+        elif args.command == "realtime-batch":
+            result = client.realtime_batch(args.tags)
         elif args.command == "history":
             result = _run_history(client, args)
         else:
             result = _run_events(client, args)
         _json_dump(result)
-        return 0
+        return 1 if result.get("ok") is False else 0
     except DcsCliError as error:
         _json_dump(_error_payload(error))
         return 1

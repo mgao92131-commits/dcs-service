@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 namespace DcsDataService.Configuration
 {
@@ -26,6 +26,9 @@ namespace DcsDataService.Configuration
         public int SocketWriteSeconds = 120;
         public string SourceTimeZone = "China Standard Time";
         public string LogDirectory = "logs";
+        public bool RealtimeEnabled = true;
+        public int RealtimeMaxBatchTags = 16;
+        public int RealtimeSlotWaitSeconds = 5;
 
         public void Validate()
         {
@@ -33,6 +36,8 @@ namespace DcsDataService.Configuration
             if (String.IsNullOrEmpty(EventsServer)) throw new ConfigurationException("Events.Server is required.");
             if (String.IsNullOrEmpty(EventsDatabase)) throw new ConfigurationException("Events.Database is required.");
             if (String.IsNullOrEmpty(EventsSchema) || String.IsNullOrEmpty(EventsTable)) throw new ConfigurationException("Events.Schema and Events.Table are required.");
+            if (RealtimeMaxBatchTags < 1 || RealtimeMaxBatchTags > 64) throw new ConfigurationException("Realtime.MaxBatchTags must be between 1 and 64.");
+            if (RealtimeSlotWaitSeconds < 1 || RealtimeSlotWaitSeconds > 300) throw new ConfigurationException("Realtime.SlotWaitSeconds must be between 1 and 300.");
             Positive(ApiPort, "Api.Port"); Positive(HistorianConnectionTimeoutSeconds, "Historian.ConnectionTimeoutSeconds");
             Positive(EventsCommandTimeoutSeconds, "Events.CommandTimeoutSeconds"); Positive(EventsStateCacheSeconds, "Events.RuntimeStateCacheSeconds");
             Positive(HistoryMaxConcurrent, "Concurrency.HistoryMaxConcurrent"); Positive(EventMaxConcurrent, "Concurrency.EventMaxConcurrent"); Positive(RequestQueueLimit, "Concurrency.RequestQueueLimit");

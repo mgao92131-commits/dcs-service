@@ -1,0 +1,850 @@
+
+TARGET ?Locate@RtSession@@SA?AW4BSS_STATUS@@AAPAVRtBaseModuleRole@@AAVRtPath@@I@Z
+00401e04 mov      eax, dword ptr [esp + 0x8c]                
+00401e0b xor      ebp, ebp                                   
+00401e0d cmp      dword ptr [eax - 0xc], ebp                 
+00401e10 mov      dword ptr [esp + 0x84], ebp                
+00401e17 jne      0x401e2c                                   
+00401e19 push     0x4160e8                                   
+00401e1e lea      ecx, [esi + 0x74]                          
+00401e21 call     dword ptr [0x4151a4]                       777
+00401e27 jmp      0x40231d                                   
+00401e2c lea      ecx, [esp + 0x8c]                          
+00401e33 lea      edi, [esi + 0x74]                          
+00401e36 push     ecx                                        
+00401e37 mov      ecx, edi                                   
+00401e39 call     dword ptr [0x4151a0]                       774
+00401e3f mov      eax, dword ptr [edi]                       
+00401e41 push     eax                                        
+00401e42 lea      ecx, [esp + 0x30]                          
+00401e46 call     dword ptr [0x415690]                       ??0RtPath@@QAE@PB_W@Z
+00401e4c cmp      byte ptr [esp + 0x2c], 0                   
+00401e51 mov      byte ptr [esp + 0x84], 1                   
+00401e59 jne      0x401e65                                   
+00401e5b push     0x4160d0                                   
+00401e60 jmp      0x402303                                   
+00401e65 push     -1                                         
+00401e67 lea      edx, [esp + 0x30]                          
+00401e6b push     edx                                        
+00401e6c lea      eax, [esp + 0x2c]                          
+00401e70 push     eax                                        
+00401e71 call     dword ptr [0x4155a4]                       ?Locate@RtSession@@SA?AW4BSS_STATUS@@AAPAVRtBaseModuleRole@@AAVRtPath@@I@Z
+00401e77 add      esp, 0xc                                   
+00401e7a cmp      eax, ebp                                   
+00401e7c jne      0x4022fe                                   
+00401e82 mov      ecx, dword ptr [esp + 0x24]                
+00401e86 cmp      ecx, ebp                                   
+00401e88 je       0x4022fe                                   
+00401e8e mov      edx, dword ptr [ecx]                       
+00401e90 mov      eax, dword ptr [edx + 0x2c8]               
+00401e96 call     eax                                        
+00401e98 mov      ecx, dword ptr [esp + 0x24]                
+00401e9c mov      edx, dword ptr [ecx]                       
+00401e9e mov      bl, al                                     
+00401ea0 mov      eax, dword ptr [edx + 0x2d0]               
+00401ea6 mov      byte ptr [esp + 0x1c], bl                  
+00401eaa call     eax                                        
+00401eac movzx    ecx, bl                                    
+00401eaf push     ecx                                        
+00401eb0 lea      edx, [esp + 0x4c]                          
+00401eb4 push     0x4160c8                                   
+00401eb9 push     edx                                        
+00401eba mov      byte ptr [esp + 0x2c], al                  
+00401ebe call     dword ptr [0x4154f8]                       sprintf
+00401ec4 add      esp, 0xc                                   
+00401ec7 lea      eax, [esp + 0x48]                          
+00401ecb lea      edi, [esi + 0x98]                          
+00401ed1 push     eax                                        
+00401ed2 mov      ecx, edi                                   
+00401ed4 call     dword ptr [0x4151a4]                       777
+00401eda lea      ecx, [esp + 0x28]                          
+00401ede mov      dword ptr [esp + 0x28], ebp                
+00401ee2 mov      ebp, dword ptr [esp + 0x1c]                
+00401ee6 push     ecx                                        
+00401ee7 push     ebp                                        
+00401ee8 call     dword ptr [0x4155a8]                       ?GetPlantAreaName@RtPlantArea@@SA?AW4BSS_STATUS@@EAAPA_W@Z
+00401eee add      esp, 8                                     
+00401ef1 test     eax, eax                                   
+00401ef3 jne      0x401f1c                                   
+00401ef5 push     0x4160c4                                   
+00401efa mov      ecx, edi                                   
+00401efc call     dword ptr [0x415190]                       900
+00401f02 mov      edx, dword ptr [esp + 0x28]                
+00401f06 push     edx                                        
+00401f07 mov      ecx, edi                                   
+00401f09 call     dword ptr [0x41518c]                       899
+00401f0f mov      eax, dword ptr [esp + 0x28]                
+00401f13 push     eax                                        
+00401f14 call     0x40f540                                   
+00401f19 add      esp, 4                                     
+00401f1c mov      bl, byte ptr [esp + 0x20]                  
+00401f20 test     bl, bl                                     
+00401f22 mov      eax, 0x4160bc                              
+00401f27 jne      0x401f2e                                   
+00401f29 mov      eax, 0x4160b4                              
+00401f2e push     eax                                        
+
+TARGET ?Locate@RtSession@@SA?AW4BSS_STATUS@@AAPAVRtBaseModuleRole@@AAVRtPath@@I@Z
+00402eed lea      eax, [esp + 0x3c]                          
+00402ef1 mov      dword ptr fs:[0], eax                      
+00402ef7 mov      esi, ecx                                   
+00402ef9 push     1                                          
+00402efb call     0x40f878                                   6232
+00402f00 lea      ebp, [esi + 0x1d8]                         
+00402f06 push     0x416954                                   
+00402f0b mov      ecx, ebp                                   
+00402f0d call     dword ptr [0x415428]                       776
+00402f13 xor      edi, edi                                   
+00402f15 push     edi                                        
+00402f16 mov      ecx, esi                                   
+00402f18 call     0x40f878                                   6232
+00402f1d mov      eax, dword ptr [esi + 0xd0]                
+00402f23 push     eax                                        
+00402f24 lea      ecx, [esp + 0x24]                          
+00402f28 mov      dword ptr [esp + 0x18], edi                
+00402f2c call     dword ptr [0x415690]                       ??0RtPath@@QAE@PB_W@Z
+00402f32 cmp      byte ptr [esp + 0x20], 0                   
+00402f37 mov      dword ptr [esp + 0x44], edi                
+00402f3b je       0x403024                                   
+00402f41 cmp      dword ptr [esi + 0x78], edi                
+00402f44 je       0x40301d                                   
+00402f4a push     0x3e8                                      
+00402f4f lea      eax, [esp + 0x24]                          
+00402f53 push     eax                                        
+00402f54 lea      ecx, [esp + 0x1c]                          
+00402f58 push     ecx                                        
+00402f59 call     dword ptr [0x4155a4]                       ?Locate@RtSession@@SA?AW4BSS_STATUS@@AAPAVRtBaseModuleRole@@AAVRtPath@@I@Z
+00402f5f add      esp, 0xc                                   
+00402f62 cmp      eax, edi                                   
+00402f64 jne      0x403016                                   
+00402f6a cmp      dword ptr [esp + 0x14], edi                
+00402f6e je       0x403016                                   
+00402f74 push     1                                          
+00402f76 lea      edx, [esp + 0x20]                          
+00402f7a push     edx                                        
+00402f7b lea      eax, [esp + 0x20]                          
+00402f7f push     eax                                        
+00402f80 mov      ecx, esi                                   
+00402f82 mov      dword ptr [esp + 0x24], edi                
+00402f86 mov      dword ptr [esp + 0x28], edi                
+00402f8a call     0x402b60                                   
+00402f8f cmp      eax, edi                                   
+00402f91 mov      ebx, dword ptr [esp + 0x18]                
+00402f95 jne      0x402fee                                   
+00402f97 cmp      ebx, edi                                   
+00402f99 je       0x402fee                                   
+00402f9b mov      eax, dword ptr [esi + 0x1e0]               
+00402fa1 mov      ecx, dword ptr [esp + 0x14]                
+00402fa5 mov      edx, dword ptr [ecx]                       
+00402fa7 mov      edx, dword ptr [edx + 0x338]               
+00402fad push     edi                                        
+00402fae push     eax                                        
+00402faf mov      eax, dword ptr [esp + 0x24]                
+00402fb3 push     eax                                        
+00402fb4 push     ebx                                        
+00402fb5 call     edx                                        
+00402fb7 mov      edi, eax                                   
+00402fb9 test     edi, edi                                   
+00402fbb mov      ecx, ebp                                   
+00402fbd jne      0x402fcc                                   
+00402fbf push     0x416918                                   
+00402fc4 call     dword ptr [0x415428]                       776
+00402fca jmp      0x402ffb                                   
+00402fcc push     0x4168ec                                   
+00402fd1 call     dword ptr [0x415428]                       776
+00402fd7 push     edi                                        
+00402fd8 call     dword ptr [0x415588]                       ?GetString@RtStatusStrings@@SAPB_WW4BSS_STATUS@@@Z
+00402fde add      esp, 4                                     
+00402fe1 push     eax                                        
+00402fe2 mov      ecx, ebp                                   
+00402fe4 call     dword ptr [0x41518c]                       899
+00402fea xor      edi, edi                                   
+00402fec jmp      0x402ffb                                   
+00402fee push     0x4168bc                                   
+00402ff3 mov      ecx, ebp                                   
+00402ff5 call     dword ptr [0x415428]                       776
+00402ffb push     ebx                                        
+00402ffc call     0x40f540                                   
+00403001 mov      ecx, dword ptr [esp + 0x18]                
+00403005 add      esp, 4                                     
+00403008 cmp      ecx, edi                                   
+
+TARGET ?Locate@RtSession@@SA?AW4BSS_STATUS@@AAPAVRtBaseModuleRole@@AAVRtPath@@I@Z
+0040307d lea      eax, [esp + 0x3c]                          
+00403081 mov      dword ptr fs:[0], eax                      
+00403087 mov      esi, ecx                                   
+00403089 push     1                                          
+0040308b call     0x40f878                                   6232
+00403090 lea      ebp, [esi + 0x1d8]                         
+00403096 push     0x416954                                   
+0040309b mov      ecx, ebp                                   
+0040309d call     dword ptr [0x415428]                       776
+004030a3 xor      edi, edi                                   
+004030a5 push     edi                                        
+004030a6 mov      ecx, esi                                   
+004030a8 call     0x40f878                                   6232
+004030ad mov      eax, dword ptr [esi + 0xd0]                
+004030b3 push     eax                                        
+004030b4 lea      ecx, [esp + 0x24]                          
+004030b8 mov      dword ptr [esp + 0x18], edi                
+004030bc call     dword ptr [0x415690]                       ??0RtPath@@QAE@PB_W@Z
+004030c2 cmp      byte ptr [esp + 0x20], 0                   
+004030c7 mov      dword ptr [esp + 0x44], edi                
+004030cb je       0x4031b6                                   
+004030d1 cmp      dword ptr [esi + 0x78], edi                
+004030d4 je       0x4031af                                   
+004030da push     0x3e8                                      
+004030df lea      eax, [esp + 0x24]                          
+004030e3 push     eax                                        
+004030e4 lea      ecx, [esp + 0x1c]                          
+004030e8 push     ecx                                        
+004030e9 call     dword ptr [0x4155a4]                       ?Locate@RtSession@@SA?AW4BSS_STATUS@@AAPAVRtBaseModuleRole@@AAVRtPath@@I@Z
+004030ef add      esp, 0xc                                   
+004030f2 cmp      eax, edi                                   
+004030f4 jne      0x4031a8                                   
+004030fa cmp      dword ptr [esp + 0x14], edi                
+004030fe je       0x4031a8                                   
+00403104 push     2                                          
+00403106 lea      edx, [esp + 0x20]                          
+0040310a push     edx                                        
+0040310b lea      eax, [esp + 0x20]                          
+0040310f push     eax                                        
+00403110 mov      ecx, esi                                   
+00403112 mov      dword ptr [esp + 0x24], edi                
+00403116 mov      dword ptr [esp + 0x28], edi                
+0040311a call     0x402b60                                   
+0040311f cmp      eax, edi                                   
+00403121 mov      ebx, dword ptr [esp + 0x18]                
+00403125 jne      0x403180                                   
+00403127 cmp      ebx, edi                                   
+00403129 je       0x403180                                   
+0040312b mov      eax, dword ptr [esi + 0x1e4]               
+00403131 mov      ecx, dword ptr [esp + 0x14]                
+00403135 mov      edx, dword ptr [ecx]                       
+00403137 mov      edx, dword ptr [edx + 0x33c]               
+0040313d push     edi                                        
+0040313e push     edi                                        
+0040313f push     edi                                        
+00403140 push     eax                                        
+00403141 mov      eax, dword ptr [esp + 0x2c]                
+00403145 push     eax                                        
+00403146 push     ebx                                        
+00403147 call     edx                                        
+00403149 mov      edi, eax                                   
+0040314b test     edi, edi                                   
+0040314d mov      ecx, ebp                                   
+0040314f jne      0x40315e                                   
+00403151 push     0x416964                                   
+00403156 call     dword ptr [0x415428]                       776
+0040315c jmp      0x40318d                                   
+0040315e push     0x4168ec                                   
+00403163 call     dword ptr [0x415428]                       776
+00403169 push     edi                                        
+0040316a call     dword ptr [0x415588]                       ?GetString@RtStatusStrings@@SAPB_WW4BSS_STATUS@@@Z
+00403170 add      esp, 4                                     
+00403173 push     eax                                        
+00403174 mov      ecx, ebp                                   
+00403176 call     dword ptr [0x41518c]                       899
+0040317c xor      edi, edi                                   
+0040317e jmp      0x40318d                                   
+00403180 push     0x4168bc                                   
+00403185 mov      ecx, ebp                                   
+00403187 call     dword ptr [0x415428]                       776
+0040318d push     ebx                                        
+0040318e call     0x40f540                                   
+00403193 mov      ecx, dword ptr [esp + 0x18]                
+
+TARGET ?InitializeHawk@@YAJE@Z
+0040bcaa call     edi                                        
+0040bcac mov      ecx, dword ptr [esp + 0x30]                
+0040bcb0 sub      ecx, dword ptr [esp + 0x28]                
+0040bcb4 mov      eax, dword ptr [esi + 0xb4]                
+0040bcba lea      edx, [esp + 0x44]                          
+0040bcbe push     edx                                        
+0040bcbf push     eax                                        
+0040bcc0 mov      dword ptr [esi + 0x1d5], ecx               
+0040bcc6 call     edi                                        
+0040bcc8 mov      ecx, dword ptr [esp + 0x28]                
+0040bccc mov      eax, dword ptr [esp + 0x48]                
+0040bcd0 mov      edx, dword ptr [esp + 0x2c]                
+0040bcd4 sub      eax, ecx                                   
+0040bcd6 mov      dword ptr [esi + 0x1d9], eax               
+0040bcdc add      eax, ecx                                   
+0040bcde push     1                                          
+0040bce0 mov      dword ptr [esp + 0x34], eax                
+0040bce4 sub      eax, ecx                                   
+0040bce6 push     eax                                        
+0040bce7 mov      eax, dword ptr [esp + 0x2c]                
+0040bceb sub      edx, eax                                   
+0040bced push     edx                                        
+0040bcee push     ecx                                        
+0040bcef push     eax                                        
+0040bcf0 mov      ecx, esi                                   
+0040bcf2 mov      dword ptr [esi + 0x1c9], 0                 
+0040bcfc call     0x40faf4                                   4119
+0040bd01 push     1                                          
+0040bd03 call     dword ptr [0x415784]                       ?InitializeHawk@@YAJE@Z
+0040bd09 add      esp, 4                                     
+0040bd0c test     eax, eax                                   
+0040bd0e je       0x40bd18                                   
+0040bd10 push     1                                          
+0040bd12 call     dword ptr [0x4150a0]                       ExitProcess
+0040bd18 mov      eax, dword ptr [esi + 0x20]                
+0040bd1b push     0                                          
+0040bd1d push     0x1f4                                      
+0040bd22 push     1                                          
+0040bd24 push     eax                                        
+0040bd25 call     dword ptr [0x41563c]                       SetTimer
+0040bd2b or       edi, 0xffffffff                            
+0040bd2e cmp      dword ptr [esi + 0x78], edi                
+0040bd31 je       0x40bd7a                                   
+0040bd33 cmp      dword ptr [esi + 0x74], edi                
+0040bd36 je       0x40bd7a                                   
+0040bd38 push     0                                          
+0040bd3a lea      ecx, [esp + 0x38]                          
+0040bd3e push     ecx                                        
+0040bd3f push     0                                          
+0040bd41 push     0x30                                       
+0040bd43 call     dword ptr [0x41560c]                       SystemParametersInfoW
+0040bd49 mov      edx, dword ptr [esp + 0x3c]                
+0040bd4d mov      eax, dword ptr [esi + 0x78]                
+0040bd50 add      edx, -0x64                                 
+0040bd53 cmp      eax, edx                                   
+0040bd55 jae      0x40bd7a                                   
+0040bd57 mov      edx, dword ptr [esp + 0x40]                
+0040bd5b mov      ecx, dword ptr [esi + 0x74]                
+0040bd5e add      edx, -0x32                                 
+0040bd61 cmp      ecx, edx                                   
+0040bd63 jae      0x40bd7a                                   
+0040bd65 push     5                                          
+0040bd67 push     0                                          
+0040bd69 push     0                                          
+0040bd6b push     ecx                                        
+0040bd6c push     eax                                        
+0040bd6d mov      eax, dword ptr [0x415370]                  6278
+0040bd72 push     eax                                        
+0040bd73 mov      ecx, esi                                   
+0040bd75 call     0x40fb2a                                   6061
+0040bd7a cmp      dword ptr [esi + 0x88], 0                  
+0040bd81 je       0x40bd8a                                   
+0040bd83 mov      ecx, esi                                   
+0040bd85 call     0x40b270                                   
+0040bd8a lea      ecx, [esp + 0x14]                          
+0040bd8e call     dword ptr [0x415430]                       577
+0040bd94 lea      ecx, [esp + 0x1c]                          
+0040bd98 mov      dword ptr [esp + 0x5c], edi                
+0040bd9c mov      dword ptr [esp + 0x1c], 0x417da8           
+0040bda4 call     0x40fadc                                   1946
+0040bda9 mov      eax, 1                                     
+0040bdae mov      ecx, dword ptr [esp + 0x54]                
+0040bdb2 mov      dword ptr fs:[0], ecx                      
+
+TARGET ?Locate@RtSession@@SA?AW4BSS_STATUS@@AAPAVRtBaseModuleRole@@AAVRtPath@@I@Z
+0040d4db cmp      ecx, edi                                   
+0040d4dd je       0x40d4e7                                   
+0040d4df mov      edx, dword ptr [ecx]                       
+0040d4e1 mov      eax, dword ptr [edx]                       
+0040d4e3 push     1                                          
+0040d4e5 call     eax                                        
+0040d4e7 mov      dword ptr [ebp], edi                       
+0040d4ea lea      edi, [esi + 0x90]                          
+0040d4f0 mov      ecx, ebx                                   
+0040d4f2 mov      word ptr [edi], 0                          
+0040d4f7 mov      word ptr [edi + 2], 0                      
+0040d4fd call     dword ptr [0x415360]                       2121
+0040d503 lea      ecx, [esi + 0x1b5]                         
+0040d509 call     dword ptr [0x415360]                       2121
+0040d50f mov      eax, dword ptr [esi + 0x190]               
+0040d515 push     eax                                        
+0040d516 lea      ecx, [esp + 0x34]                          
+0040d51a call     dword ptr [0x415690]                       ??0RtPath@@QAE@PB_W@Z
+0040d520 cmp      byte ptr [esp + 0x30], 0                   
+0040d525 mov      dword ptr [esp + 0x6c], 0                  
+0040d52d je       0x40d620                                   
+0040d533 cmp      dword ptr [esi + 0x7c], 0                  
+0040d537 je       0x40d570                                   
+0040d539 mov      ecx, dword ptr [esi + 0x1a0]               
+0040d53f push     ecx                                        
+0040d540 lea      edx, [esp + 0x34]                          
+0040d544 push     edx                                        
+0040d545 push     ebp                                        
+0040d546 call     dword ptr [0x4155a4]                       ?Locate@RtSession@@SA?AW4BSS_STATUS@@AAPAVRtBaseModuleRole@@AAVRtPath@@I@Z
+0040d54c mov      dword ptr [esp + 0x20], eax                
+0040d550 mov      eax, dword ptr [esi + 0x1a0]               
+0040d556 add      esp, 0xc                                   
+0040d559 cmp      dword ptr [esi + 0x1b9], eax               
+0040d55f je       0x40d612                                   
+0040d565 mov      dword ptr [esi + 0x1b9], eax               
+0040d56b jmp      0x40d612                                   
+0040d570 lea      eax, [esp + 0x30]                          
+0040d574 push     eax                                        
+0040d575 push     edi                                        
+0040d576 call     dword ptr [0x4157f8]                       ?Locate@RtSite@@SA?AW4BSS_STATUS@@AAVOid@@AAVRtPath@@@Z
+0040d57c mov      ecx, dword ptr [edi]                       
+0040d57e add      esp, 8                                     
+0040d581 push     ecx                                        
+0040d582 lea      ecx, [esp + 0x24]                          
+0040d586 mov      dword ptr [esp + 0x18], eax                
+0040d58a call     0x40ce80                                   
+0040d58f mov      ecx, dword ptr [esp + 0x20]                
+0040d593 test     ecx, ecx                                   
+0040d595 mov      byte ptr [esp + 0x6c], 1                   
+0040d59a je       0x40d5c3                                   
+0040d59c mov      edx, dword ptr [ecx]                       
+0040d59e mov      eax, dword ptr [esi + 0x1a0]               
+0040d5a4 mov      edx, dword ptr [edx + 0x2ac]               
+0040d5aa push     eax                                        
+0040d5ab call     edx                                        
+0040d5ad mov      eax, dword ptr [esi + 0x1a0]               
+0040d5b3 cmp      dword ptr [esi + 0x1b9], eax               
+0040d5b9 je       0x40d604                                   
+0040d5bb mov      dword ptr [esi + 0x1b9], eax               
+0040d5c1 jmp      0x40d604                                   
+0040d5c3 push     0x418950                                   
+0040d5c8 lea      ecx, [esi + 0x19c]                         
+0040d5ce mov      word ptr [edi], 0                          
+0040d5d3 mov      word ptr [edi + 2], 0                      
+0040d5d9 call     dword ptr [0x415428]                       776
+0040d5df push     0x415a70                                   
+0040d5e4 lea      ecx, [esi + 0x194]                         
+0040d5ea call     dword ptr [0x415428]                       776
+0040d5f0 fld      dword ptr [0x4187e4]                       
+0040d5f6 fstp     dword ptr [esi + 0x198]                    
+0040d5fc mov      dword ptr [esp + 0x14], 1                  
+0040d604 lea      ecx, [esp + 0x20]                          
+0040d608 mov      byte ptr [esp + 0x6c], 0                   
+0040d60d call     0x40b7d0                                   
+0040d612 cmp      dword ptr [esp + 0x14], 0                  
+0040d617 je       0x40d655                                   
+0040d619 push     0x418934                                   
+0040d61e jmp      0x40d625                                   
+0040d620 push     0x418950                                   
+0040d625 lea      ecx, [esi + 0x19c]                         
+0040d62b call     dword ptr [0x415428]                       776
+0040d631 push     0x415a70                                   
+0040d636 lea      ecx, [esi + 0x194]                         
+
+TARGET ?Locate@RtSite@@SA?AW4BSS_STATUS@@AAVOid@@AAVRtPath@@@Z
+0040d4fd call     dword ptr [0x415360]                       2121
+0040d503 lea      ecx, [esi + 0x1b5]                         
+0040d509 call     dword ptr [0x415360]                       2121
+0040d50f mov      eax, dword ptr [esi + 0x190]               
+0040d515 push     eax                                        
+0040d516 lea      ecx, [esp + 0x34]                          
+0040d51a call     dword ptr [0x415690]                       ??0RtPath@@QAE@PB_W@Z
+0040d520 cmp      byte ptr [esp + 0x30], 0                   
+0040d525 mov      dword ptr [esp + 0x6c], 0                  
+0040d52d je       0x40d620                                   
+0040d533 cmp      dword ptr [esi + 0x7c], 0                  
+0040d537 je       0x40d570                                   
+0040d539 mov      ecx, dword ptr [esi + 0x1a0]               
+0040d53f push     ecx                                        
+0040d540 lea      edx, [esp + 0x34]                          
+0040d544 push     edx                                        
+0040d545 push     ebp                                        
+0040d546 call     dword ptr [0x4155a4]                       ?Locate@RtSession@@SA?AW4BSS_STATUS@@AAPAVRtBaseModuleRole@@AAVRtPath@@I@Z
+0040d54c mov      dword ptr [esp + 0x20], eax                
+0040d550 mov      eax, dword ptr [esi + 0x1a0]               
+0040d556 add      esp, 0xc                                   
+0040d559 cmp      dword ptr [esi + 0x1b9], eax               
+0040d55f je       0x40d612                                   
+0040d565 mov      dword ptr [esi + 0x1b9], eax               
+0040d56b jmp      0x40d612                                   
+0040d570 lea      eax, [esp + 0x30]                          
+0040d574 push     eax                                        
+0040d575 push     edi                                        
+0040d576 call     dword ptr [0x4157f8]                       ?Locate@RtSite@@SA?AW4BSS_STATUS@@AAVOid@@AAVRtPath@@@Z
+0040d57c mov      ecx, dword ptr [edi]                       
+0040d57e add      esp, 8                                     
+0040d581 push     ecx                                        
+0040d582 lea      ecx, [esp + 0x24]                          
+0040d586 mov      dword ptr [esp + 0x18], eax                
+0040d58a call     0x40ce80                                   
+0040d58f mov      ecx, dword ptr [esp + 0x20]                
+0040d593 test     ecx, ecx                                   
+0040d595 mov      byte ptr [esp + 0x6c], 1                   
+0040d59a je       0x40d5c3                                   
+0040d59c mov      edx, dword ptr [ecx]                       
+0040d59e mov      eax, dword ptr [esi + 0x1a0]               
+0040d5a4 mov      edx, dword ptr [edx + 0x2ac]               
+0040d5aa push     eax                                        
+0040d5ab call     edx                                        
+0040d5ad mov      eax, dword ptr [esi + 0x1a0]               
+0040d5b3 cmp      dword ptr [esi + 0x1b9], eax               
+0040d5b9 je       0x40d604                                   
+0040d5bb mov      dword ptr [esi + 0x1b9], eax               
+0040d5c1 jmp      0x40d604                                   
+0040d5c3 push     0x418950                                   
+0040d5c8 lea      ecx, [esi + 0x19c]                         
+0040d5ce mov      word ptr [edi], 0                          
+0040d5d3 mov      word ptr [edi + 2], 0                      
+0040d5d9 call     dword ptr [0x415428]                       776
+0040d5df push     0x415a70                                   
+0040d5e4 lea      ecx, [esi + 0x194]                         
+0040d5ea call     dword ptr [0x415428]                       776
+0040d5f0 fld      dword ptr [0x4187e4]                       
+0040d5f6 fstp     dword ptr [esi + 0x198]                    
+0040d5fc mov      dword ptr [esp + 0x14], 1                  
+0040d604 lea      ecx, [esp + 0x20]                          
+0040d608 mov      byte ptr [esp + 0x6c], 0                   
+0040d60d call     0x40b7d0                                   
+0040d612 cmp      dword ptr [esp + 0x14], 0                  
+0040d617 je       0x40d655                                   
+0040d619 push     0x418934                                   
+0040d61e jmp      0x40d625                                   
+0040d620 push     0x418950                                   
+0040d625 lea      ecx, [esi + 0x19c]                         
+0040d62b call     dword ptr [0x415428]                       776
+0040d631 push     0x415a70                                   
+0040d636 lea      ecx, [esi + 0x194]                         
+0040d63c call     dword ptr [0x415428]                       776
+0040d642 fld      dword ptr [0x4187e4]                       
+0040d648 cmp      dword ptr [esp + 0x14], 0                  
+0040d64d fstp     dword ptr [esi + 0x198]                    
+0040d653 jne      0x40d6b8                                   
+0040d655 lea      eax, [esi + 0x190]                         
+0040d65b push     eax                                        
+0040d65c mov      ecx, ebx                                   
+0040d65e call     dword ptr [0x4151a0]                       774
+0040d664 push     0                                          
+0040d666 lea      ecx, [esp + 0x34]                          
+
+TARGET ?Locate@RtSession@@SA?AW4BSS_STATUS@@AAPAVRtBaseModuleRole@@AAVRtPath@@I@Z
+0040e657 push     eax                                        
+0040e658 lea      eax, [esp + 0x88]                          
+0040e65f mov      dword ptr fs:[0], eax                      
+0040e665 push     1                                          
+0040e667 mov      esi, ecx                                   
+0040e669 call     0x40f878                                   6232
+0040e66e lea      ecx, [esp + 0x1c]                          
+0040e672 call     dword ptr [0x415424]                       293
+0040e678 mov      eax, dword ptr [esi + 0x7c]                
+0040e67b xor      ebx, ebx                                   
+0040e67d push     eax                                        
+0040e67e lea      ecx, [esp + 0x38]                          
+0040e682 mov      dword ptr [esp + 0x94], ebx                
+0040e689 mov      dword ptr [esp + 0x24], ebx                
+0040e68d mov      dword ptr [esp + 0x18], ebx                
+0040e691 mov      word ptr [esp + 0x1c], bx                  
+0040e696 mov      word ptr [esp + 0x1e], bx                  
+0040e69b call     dword ptr [0x415690]                       ??0RtPath@@QAE@PB_W@Z
+0040e6a1 cmp      byte ptr [esp + 0x34], bl                  
+0040e6a5 mov      byte ptr [esp + 0x90], 1                   
+0040e6ad je       0x40e6f8                                   
+0040e6af cmp      dword ptr [esi + 0x78], ebx                
+0040e6b2 je       0x40e6ce                                   
+0040e6b4 push     0x3e8                                      
+0040e6b9 lea      eax, [esp + 0x38]                          
+0040e6bd push     eax                                        
+0040e6be lea      ecx, [esp + 0x1c]                          
+0040e6c2 push     ecx                                        
+0040e6c3 call     dword ptr [0x4155a4]                       ?Locate@RtSession@@SA?AW4BSS_STATUS@@AAPAVRtBaseModuleRole@@AAVRtPath@@I@Z
+0040e6c9 add      esp, 0xc                                   
+0040e6cc jmp      0x40e6e1                                   
+0040e6ce lea      edx, [esp + 0x34]                          
+0040e6d2 push     edx                                        
+0040e6d3 lea      eax, [esp + 0x1c]                          
+0040e6d7 push     eax                                        
+0040e6d8 call     dword ptr [0x4157f8]                       ?Locate@RtSite@@SA?AW4BSS_STATUS@@AAVOid@@AAVRtPath@@@Z
+0040e6de add      esp, 8                                     
+0040e6e1 cmp      eax, ebx                                   
+0040e6e3 je       0x40e70b                                   
+0040e6e5 push     0x418934                                   
+0040e6ea lea      ecx, [esi + 0x84]                          
+0040e6f0 call     dword ptr [0x415428]                       776
+0040e6f6 jmp      0x40e75b                                   
+0040e6f8 push     0x418950                                   
+0040e6fd lea      ecx, [esi + 0x84]                          
+0040e703 call     dword ptr [0x415428]                       776
+0040e709 jmp      0x40e75b                                   
+0040e70b push     ebx                                        
+0040e70c lea      ecx, [esp + 0x38]                          
+0040e710 call     dword ptr [0x41571c]                       ?pathSize@RtPath@@QBEGG@Z
+0040e716 movzx    eax, ax                                    
+0040e719 xor      ecx, ecx                                   
+0040e71b add      eax, 1                                     
+0040e71e mov      edx, 2                                     
+0040e723 mul      edx                                        
+0040e725 seto     cl                                         
+0040e728 neg      ecx                                        
+0040e72a or       ecx, eax                                   
+0040e72c push     ecx                                        
+0040e72d call     0x40f92c                                   265
+0040e732 mov      edi, eax                                   
+0040e734 add      esp, 4                                     
+0040e737 cmp      edi, ebx                                   
+0040e739 je       0x40e75b                                   
+0040e73b push     ebx                                        
+0040e73c push     edi                                        
+0040e73d lea      ecx, [esp + 0x3c]                          
+0040e741 call     dword ptr [0x415720]                       ?toWStr@RtPath@@QBEXPA_WG@Z
+0040e747 push     edi                                        
+0040e748 lea      ecx, [esp + 0x20]                          
+0040e74c call     dword ptr [0x415428]                       776
+0040e752 push     edi                                        
+0040e753 call     0x40f540                                   
+0040e758 add      esp, 4                                     
+0040e75b mov      eax, dword ptr [esi + 0x78]                
+0040e75e cmp      eax, ebx                                   
+0040e760 mov      ecx, dword ptr [esp + 0x14]                
+0040e764 je       0x40e772                                   
+0040e766 cmp      ecx, ebx                                   
+0040e768 jne      0x40e788                                   
+0040e76a cmp      eax, ebx                                   
+0040e76c jne      0x40ea7f                                   
+0040e772 cmp      word ptr [esp + 0x18], bx                  
+
+TARGET ?Locate@RtSite@@SA?AW4BSS_STATUS@@AAVOid@@AAVRtPath@@@Z
+0040e672 call     dword ptr [0x415424]                       293
+0040e678 mov      eax, dword ptr [esi + 0x7c]                
+0040e67b xor      ebx, ebx                                   
+0040e67d push     eax                                        
+0040e67e lea      ecx, [esp + 0x38]                          
+0040e682 mov      dword ptr [esp + 0x94], ebx                
+0040e689 mov      dword ptr [esp + 0x24], ebx                
+0040e68d mov      dword ptr [esp + 0x18], ebx                
+0040e691 mov      word ptr [esp + 0x1c], bx                  
+0040e696 mov      word ptr [esp + 0x1e], bx                  
+0040e69b call     dword ptr [0x415690]                       ??0RtPath@@QAE@PB_W@Z
+0040e6a1 cmp      byte ptr [esp + 0x34], bl                  
+0040e6a5 mov      byte ptr [esp + 0x90], 1                   
+0040e6ad je       0x40e6f8                                   
+0040e6af cmp      dword ptr [esi + 0x78], ebx                
+0040e6b2 je       0x40e6ce                                   
+0040e6b4 push     0x3e8                                      
+0040e6b9 lea      eax, [esp + 0x38]                          
+0040e6bd push     eax                                        
+0040e6be lea      ecx, [esp + 0x1c]                          
+0040e6c2 push     ecx                                        
+0040e6c3 call     dword ptr [0x4155a4]                       ?Locate@RtSession@@SA?AW4BSS_STATUS@@AAPAVRtBaseModuleRole@@AAVRtPath@@I@Z
+0040e6c9 add      esp, 0xc                                   
+0040e6cc jmp      0x40e6e1                                   
+0040e6ce lea      edx, [esp + 0x34]                          
+0040e6d2 push     edx                                        
+0040e6d3 lea      eax, [esp + 0x1c]                          
+0040e6d7 push     eax                                        
+0040e6d8 call     dword ptr [0x4157f8]                       ?Locate@RtSite@@SA?AW4BSS_STATUS@@AAVOid@@AAVRtPath@@@Z
+0040e6de add      esp, 8                                     
+0040e6e1 cmp      eax, ebx                                   
+0040e6e3 je       0x40e70b                                   
+0040e6e5 push     0x418934                                   
+0040e6ea lea      ecx, [esi + 0x84]                          
+0040e6f0 call     dword ptr [0x415428]                       776
+0040e6f6 jmp      0x40e75b                                   
+0040e6f8 push     0x418950                                   
+0040e6fd lea      ecx, [esi + 0x84]                          
+0040e703 call     dword ptr [0x415428]                       776
+0040e709 jmp      0x40e75b                                   
+0040e70b push     ebx                                        
+0040e70c lea      ecx, [esp + 0x38]                          
+0040e710 call     dword ptr [0x41571c]                       ?pathSize@RtPath@@QBEGG@Z
+0040e716 movzx    eax, ax                                    
+0040e719 xor      ecx, ecx                                   
+0040e71b add      eax, 1                                     
+0040e71e mov      edx, 2                                     
+0040e723 mul      edx                                        
+0040e725 seto     cl                                         
+0040e728 neg      ecx                                        
+0040e72a or       ecx, eax                                   
+0040e72c push     ecx                                        
+0040e72d call     0x40f92c                                   265
+0040e732 mov      edi, eax                                   
+0040e734 add      esp, 4                                     
+0040e737 cmp      edi, ebx                                   
+0040e739 je       0x40e75b                                   
+0040e73b push     ebx                                        
+0040e73c push     edi                                        
+0040e73d lea      ecx, [esp + 0x3c]                          
+0040e741 call     dword ptr [0x415720]                       ?toWStr@RtPath@@QBEXPA_WG@Z
+0040e747 push     edi                                        
+0040e748 lea      ecx, [esp + 0x20]                          
+0040e74c call     dword ptr [0x415428]                       776
+0040e752 push     edi                                        
+0040e753 call     0x40f540                                   
+0040e758 add      esp, 4                                     
+0040e75b mov      eax, dword ptr [esi + 0x78]                
+0040e75e cmp      eax, ebx                                   
+0040e760 mov      ecx, dword ptr [esp + 0x14]                
+0040e764 je       0x40e772                                   
+0040e766 cmp      ecx, ebx                                   
+0040e768 jne      0x40e788                                   
+0040e76a cmp      eax, ebx                                   
+0040e76c jne      0x40ea7f                                   
+0040e772 cmp      word ptr [esp + 0x18], bx                  
+0040e777 je       0x40ea7f                                   
+0040e77d cmp      word ptr [esp + 0x1a], bx                  
+0040e782 je       0x40ea7f                                   
+0040e788 mov      dword ptr [esp + 0x78], 0x416e0c           
+0040e790 mov      dword ptr [esp + 0x7c], ebx                
+0040e794 cmp      eax, ebx                                   
+0040e796 mov      byte ptr [esp + 0x90], 2                   
+
+TARGET ?Locate@RtSession@@SA?AW4BSS_STATUS@@AAPAVRtBaseModuleRole@@AAVRtPath@@I@Z
+0040f117 push     eax                                        
+0040f118 lea      eax, [esp + 0x84]                          
+0040f11f mov      dword ptr fs:[0], eax                      
+0040f125 push     1                                          
+0040f127 mov      esi, ecx                                   
+0040f129 call     0x40f878                                   6232
+0040f12e lea      ecx, [esp + 0x1c]                          
+0040f132 call     dword ptr [0x415424]                       293
+0040f138 mov      eax, dword ptr [esi + 0x84]                
+0040f13e xor      ebx, ebx                                   
+0040f140 push     eax                                        
+0040f141 lea      ecx, [esp + 0x34]                          
+0040f145 mov      dword ptr [esp + 0x90], ebx                
+0040f14c mov      dword ptr [esp + 0x24], ebx                
+0040f150 mov      dword ptr [esp + 0x18], ebx                
+0040f154 mov      word ptr [esp + 0x1c], bx                  
+0040f159 mov      word ptr [esp + 0x1e], bx                  
+0040f15e call     dword ptr [0x415690]                       ??0RtPath@@QAE@PB_W@Z
+0040f164 cmp      byte ptr [esp + 0x30], bl                  
+0040f168 mov      byte ptr [esp + 0x8c], 1                   
+0040f170 je       0x40f1bb                                   
+0040f172 cmp      dword ptr [esi + 0x78], ebx                
+0040f175 je       0x40f191                                   
+0040f177 push     0x3e8                                      
+0040f17c lea      eax, [esp + 0x34]                          
+0040f180 push     eax                                        
+0040f181 lea      ecx, [esp + 0x1c]                          
+0040f185 push     ecx                                        
+0040f186 call     dword ptr [0x4155a4]                       ?Locate@RtSession@@SA?AW4BSS_STATUS@@AAPAVRtBaseModuleRole@@AAVRtPath@@I@Z
+0040f18c add      esp, 0xc                                   
+0040f18f jmp      0x40f1a4                                   
+0040f191 lea      edx, [esp + 0x30]                          
+0040f195 push     edx                                        
+0040f196 lea      eax, [esp + 0x1c]                          
+0040f19a push     eax                                        
+0040f19b call     dword ptr [0x4157f8]                       ?Locate@RtSite@@SA?AW4BSS_STATUS@@AAVOid@@AAVRtPath@@@Z
+0040f1a1 add      esp, 8                                     
+0040f1a4 cmp      eax, ebx                                   
+0040f1a6 je       0x40f1ce                                   
+0040f1a8 push     0x418934                                   
+0040f1ad lea      ecx, [esi + 0x80]                          
+0040f1b3 call     dword ptr [0x415428]                       776
+0040f1b9 jmp      0x40f21e                                   
+0040f1bb push     0x418950                                   
+0040f1c0 lea      ecx, [esi + 0x80]                          
+0040f1c6 call     dword ptr [0x415428]                       776
+0040f1cc jmp      0x40f21e                                   
+0040f1ce push     ebx                                        
+0040f1cf lea      ecx, [esp + 0x34]                          
+0040f1d3 call     dword ptr [0x41571c]                       ?pathSize@RtPath@@QBEGG@Z
+0040f1d9 movzx    eax, ax                                    
+0040f1dc xor      ecx, ecx                                   
+0040f1de add      eax, 1                                     
+0040f1e1 mov      edx, 2                                     
+0040f1e6 mul      edx                                        
+0040f1e8 seto     cl                                         
+0040f1eb neg      ecx                                        
+0040f1ed or       ecx, eax                                   
+0040f1ef push     ecx                                        
+0040f1f0 call     0x40f92c                                   265
+0040f1f5 mov      edi, eax                                   
+0040f1f7 add      esp, 4                                     
+0040f1fa cmp      edi, ebx                                   
+0040f1fc je       0x40f21e                                   
+0040f1fe push     ebx                                        
+0040f1ff push     edi                                        
+0040f200 lea      ecx, [esp + 0x38]                          
+0040f204 call     dword ptr [0x415720]                       ?toWStr@RtPath@@QBEXPA_WG@Z
+0040f20a push     edi                                        
+0040f20b lea      ecx, [esp + 0x20]                          
+0040f20f call     dword ptr [0x415428]                       776
+0040f215 push     edi                                        
+0040f216 call     0x40f540                                   
+0040f21b add      esp, 4                                     
+0040f21e mov      eax, dword ptr [esi + 0x78]                
+0040f221 cmp      eax, ebx                                   
+0040f223 mov      ecx, dword ptr [esp + 0x14]                
+0040f227 je       0x40f235                                   
+0040f229 cmp      ecx, ebx                                   
+0040f22b jne      0x40f24b                                   
+0040f22d cmp      eax, ebx                                   
+0040f22f jne      0x40f4da                                   
+0040f235 cmp      word ptr [esp + 0x18], bx                  
+
+TARGET ?Locate@RtSite@@SA?AW4BSS_STATUS@@AAVOid@@AAVRtPath@@@Z
+0040f132 call     dword ptr [0x415424]                       293
+0040f138 mov      eax, dword ptr [esi + 0x84]                
+0040f13e xor      ebx, ebx                                   
+0040f140 push     eax                                        
+0040f141 lea      ecx, [esp + 0x34]                          
+0040f145 mov      dword ptr [esp + 0x90], ebx                
+0040f14c mov      dword ptr [esp + 0x24], ebx                
+0040f150 mov      dword ptr [esp + 0x18], ebx                
+0040f154 mov      word ptr [esp + 0x1c], bx                  
+0040f159 mov      word ptr [esp + 0x1e], bx                  
+0040f15e call     dword ptr [0x415690]                       ??0RtPath@@QAE@PB_W@Z
+0040f164 cmp      byte ptr [esp + 0x30], bl                  
+0040f168 mov      byte ptr [esp + 0x8c], 1                   
+0040f170 je       0x40f1bb                                   
+0040f172 cmp      dword ptr [esi + 0x78], ebx                
+0040f175 je       0x40f191                                   
+0040f177 push     0x3e8                                      
+0040f17c lea      eax, [esp + 0x34]                          
+0040f180 push     eax                                        
+0040f181 lea      ecx, [esp + 0x1c]                          
+0040f185 push     ecx                                        
+0040f186 call     dword ptr [0x4155a4]                       ?Locate@RtSession@@SA?AW4BSS_STATUS@@AAPAVRtBaseModuleRole@@AAVRtPath@@I@Z
+0040f18c add      esp, 0xc                                   
+0040f18f jmp      0x40f1a4                                   
+0040f191 lea      edx, [esp + 0x30]                          
+0040f195 push     edx                                        
+0040f196 lea      eax, [esp + 0x1c]                          
+0040f19a push     eax                                        
+0040f19b call     dword ptr [0x4157f8]                       ?Locate@RtSite@@SA?AW4BSS_STATUS@@AAVOid@@AAVRtPath@@@Z
+0040f1a1 add      esp, 8                                     
+0040f1a4 cmp      eax, ebx                                   
+0040f1a6 je       0x40f1ce                                   
+0040f1a8 push     0x418934                                   
+0040f1ad lea      ecx, [esi + 0x80]                          
+0040f1b3 call     dword ptr [0x415428]                       776
+0040f1b9 jmp      0x40f21e                                   
+0040f1bb push     0x418950                                   
+0040f1c0 lea      ecx, [esi + 0x80]                          
+0040f1c6 call     dword ptr [0x415428]                       776
+0040f1cc jmp      0x40f21e                                   
+0040f1ce push     ebx                                        
+0040f1cf lea      ecx, [esp + 0x34]                          
+0040f1d3 call     dword ptr [0x41571c]                       ?pathSize@RtPath@@QBEGG@Z
+0040f1d9 movzx    eax, ax                                    
+0040f1dc xor      ecx, ecx                                   
+0040f1de add      eax, 1                                     
+0040f1e1 mov      edx, 2                                     
+0040f1e6 mul      edx                                        
+0040f1e8 seto     cl                                         
+0040f1eb neg      ecx                                        
+0040f1ed or       ecx, eax                                   
+0040f1ef push     ecx                                        
+0040f1f0 call     0x40f92c                                   265
+0040f1f5 mov      edi, eax                                   
+0040f1f7 add      esp, 4                                     
+0040f1fa cmp      edi, ebx                                   
+0040f1fc je       0x40f21e                                   
+0040f1fe push     ebx                                        
+0040f1ff push     edi                                        
+0040f200 lea      ecx, [esp + 0x38]                          
+0040f204 call     dword ptr [0x415720]                       ?toWStr@RtPath@@QBEXPA_WG@Z
+0040f20a push     edi                                        
+0040f20b lea      ecx, [esp + 0x20]                          
+0040f20f call     dword ptr [0x415428]                       776
+0040f215 push     edi                                        
+0040f216 call     0x40f540                                   
+0040f21b add      esp, 4                                     
+0040f21e mov      eax, dword ptr [esi + 0x78]                
+0040f221 cmp      eax, ebx                                   
+0040f223 mov      ecx, dword ptr [esp + 0x14]                
+0040f227 je       0x40f235                                   
+0040f229 cmp      ecx, ebx                                   
+0040f22b jne      0x40f24b                                   
+0040f22d cmp      eax, ebx                                   
+0040f22f jne      0x40f4da                                   
+0040f235 cmp      word ptr [esp + 0x18], bx                  
+0040f23a je       0x40f4da                                   
+0040f240 cmp      word ptr [esp + 0x1a], bx                  
+0040f245 je       0x40f4da                                   
+0040f24b mov      dword ptr [esp + 0x74], 0x416e0c           
+0040f253 mov      dword ptr [esp + 0x78], ebx                
+0040f257 cmp      eax, ebx                                   
+0040f259 mov      byte ptr [esp + 0x8c], 2                   
